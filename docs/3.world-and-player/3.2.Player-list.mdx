@@ -1,0 +1,753 @@
+---
+sidebar_position: 2
+---
+# 3.2 获取与遍历玩家列表
+
+## 前言：从"获取所有玩家"到"精确找到目标"
+
+在上一节中，我们认识了 `world.getPlayers()` 这个方法。它能返回当前所有在线玩家的数组，是处理玩家数据的起点。
+
+但在实际开发中，你很少真的需要对所有玩家做完全相同的事。更多的场景是：找到某个特定的玩家、筛选出满足某个条件的一批玩家、对不同状态的玩家做不同处理。
+
+这一节我们来深入研究玩家列表的获取和处理，把第一章学到的数组方法真正应用到 Script API 的实际场景中，同时学习一些处理玩家列表时需要注意的边界情况。
+
+---
+
+## 3.2.1 world.getPlayers() 的返回值
+
+先来搞清楚 `world.getPlayers()` 返回的东西是什么类型，以及它的基本特性。
+
+```js title="scripts/main.js"
+import { world } from "@minecraft/server";
+
+const players = world.getPlayers();
+
+// 返回的是一个数组（准确说是一个可迭代的集合）
+console.log(typeof players);          // 输出：object
+console.log(players.length);          // 当前在线玩家数量
+
+// 每个元素是一个 Player 对象
+const firstPlayer = players[0];
+console.log(firstPlayer.name);        // 第一个玩家的名字
+```
+
+:::note
+`world.getPlayers()` 返回的技术上是一个 `Player[]` 类型的数组，但它和普通 JavaScript 数组有一个细微的不同：它是在调用时生成的**快照**，反映的是调用那一刻的在线玩家状态。
+
+这意味着：
+- 如果你把返回值存进一个变量，这个变量不会随着玩家的加入或离开自动更新
+- 每次需要最新的玩家列表时，都应该重新调用 `world.getPlayers()`
+
+```js
+// 不推荐：缓存玩家列表，可能过时
+const cachedPlayers = world.getPlayers();
+
+system.runInterval(() => {
+    // 如果有新玩家加入，cachedPlayers 里不会有他
+    for (const player of cachedPlayers) {
+        player.sendMessage("...");
+    }
+}, 200);
+
+// 推荐：每次都重新获取最新列表
+system.runInterval(() => {
+    for (const player of world.getPlayers()) {
+        player.sendMessage("...");
+    }
+}, 200);
+```
+:::
+
+---
+
+## 3.2.2 使用过滤器精确获取玩家
+
+`world.getPlayers()` 接受一个可选的过滤器对象 `EntityQueryOptions`，允许你在获取时就指定条件，而不需要获取全部再筛选。
+
+过滤器的完整结构如下：
+
+```js title="scripts/main.js"
+import { world, GameMode } from "@minecraft/server";
+
+const players = world.getPlayers({
+    // 按名字筛选
+    name: "Steve",
+
+    // 按游戏模式筛选
+    gameMode: GameMode.Survival,
+
+    // 按标签筛选（玩家必须拥有所有列出的标签）
+    tags: ["vip", "member"],
+
+    // 按距离筛选（需要同时提供 location）
+    location: { x: 0, y: 64, z: 0 },
+    maxDistance: 50,
+    minDistance: 10,
+
+    // 限制返回数量
+    closest: 3,     // 返回距离 location 最近的3个
+    farthest: 3,    // 返回距离 location 最远的3个
+
+    // 按记分板筛选（第十章会详细介绍）
+    scoreOptions: [
+        { objective: "kills", minScore: 10 }
+    ],
+});
+```
+
+不需要每次都用所有条件，按需组合即可。
+
+**常用的过滤场景：**
+
+```js title="scripts/playerFilters.js"
+import { world, GameMode } from "@minecraft/server";
+
+// 找到名字为指定值的玩家（通常只有一个或零个）
+export function findPlayerByName(name) {
+    const result = world.getPlayers({ name });
+    return result.length > 0 ? result[0] : null;
+}
+
+// 获取所有生存模式的玩家
+export function getSurvivalPlayers() {
+    return world.getPlayers({ gameMode: GameMode.Survival });
+}
+
+// 获取所有创造模式的玩家
+export function getCreativePlayers() {
+    return world.getPlayers({ gameMode: GameMode.Creative });
+}
+
+// 获取指定位置附近的玩家
+export function getNearbyPlayers(location, radius) {
+    return world.getPlayers({ location, maxDistance: radius });
+}
+
+// 获取拥有特定标签的玩家
+export function getTaggedPlayers(tag) {
+    return world.getPlayers({ tags: [tag] });
+}
+```
+
+---
+
+## 3.2.3 遍历玩家列表
+
+获取到玩家列表后，遍历是最常见的操作。回顾第一章学到的几种遍历方式，在玩家列表场景里各自的适用情况：
+
+### for...of：最推荐的遍历方式
+
+当你只需要对每个玩家做同样的操作，不需要下标时：
+
+```js title="scripts/main.js"
+import { world } from "@minecraft/server";
+
+// 向所有玩家发送公告
+const message = "服务器将在5分钟后重启！";
+for (const player of world.getPlayers()) {
+    player.sendMessage(message);
+}
+```
+
+### forEach：适合链式调用之后
+
+当你已经用数组方法处理过列表，继续对结果遍历时：
+
+```js title="scripts/main.js"
+import { world, GameMode } from "@minecraft/server";
+
+// 只向生存模式的玩家发送消息
+world.getPlayers({ gameMode: GameMode.Survival })
+    .forEach(player => {
+        player.sendMessage("生存模式玩家专属提示：记得备份你的物品！");
+    });
+```
+
+### for 循环：需要下标时
+
+当你需要知道当前是第几个玩家时：
+
+```js title="scripts/main.js"
+import { world } from "@minecraft/server";
+
+const players = world.getPlayers();
+for (let i = 0; i < players.length; i++) {
+    players[i].sendMessage(`你是当前第 ${i + 1} 位在线玩家。`);
+}
+```
+
+---
+
+## 3.2.4 用数组方法处理玩家列表
+
+第一章学到的数组方法在这里大有用武之地。`world.getPlayers()` 返回的是一个标准数组，所有数组方法都可以直接使用。
+
+### filter：筛选满足条件的玩家
+
+```js title="scripts/main.js"
+import { world } from "@minecraft/server";
+
+const allPlayers = world.getPlayers();
+
+// 筛选出血量低于10的玩家
+const lowHealthPlayers = allPlayers.filter(player => {
+    const health = player.getComponent("minecraft:health")?.currentValue ?? 20;
+    return health < 10;
+});
+
+console.log(`血量偏低的玩家：${lowHealthPlayers.length} 人`);
+lowHealthPlayers.forEach(player => {
+    player.sendMessage("§c你的血量偏低，请注意补充！§r");
+});
+```
+:::tip
+`?.` 意味着如果前面内容是 null 或 undefined，就直接返回 undefined，否则继续访问。这样可以防止有关代码因为某个玩家不存在生命值(特殊情况)而报错。
+:::
+### map：提取玩家信息
+
+```js title="scripts/main.js"
+import { world } from "@minecraft/server";
+
+// 提取所有玩家的名字，得到一个字符串数组
+const playerNames = world.getPlayers().map(player => player.name);
+console.log(`在线玩家：${playerNames.join("、")}`);
+
+// 提取每个玩家的名字和坐标，得到一个对象数组
+const playerLocations = world.getPlayers().map(player => ({
+    name: player.name,
+    x: Math.floor(player.location.x),
+    y: Math.floor(player.location.y),
+    z: Math.floor(player.location.z),
+}));
+
+playerLocations.forEach(({ name, x, y, z }) => {
+    console.log(`${name}：(${x}, ${y}, ${z})`);
+});
+```
+
+### find：查找特定玩家
+
+```js title="scripts/main.js"
+import { world } from "@minecraft/server";
+
+// 查找名字为 "Steve" 的玩家
+const steve = world.getPlayers().find(p => p.name === "Steve");
+
+if (steve) {
+    steve.sendMessage("找到你了，Steve！");
+} else {
+    console.log("Steve 不在线。");
+}
+```
+
+### some / every：整体判断
+
+```js title="scripts/main.js"
+import { world } from "@minecraft/server";
+
+const players = world.getPlayers();
+
+// 是否有任何玩家血量极低
+const anyoneInDanger = players.some(player => {
+    const health = player.getComponent("minecraft:health")?.currentValue ?? 20;
+    return health <= 4;
+});
+
+if (anyoneInDanger) {
+    world.sendMessage("§c[警告] 有玩家处于极度危险状态！§r");
+}
+
+// 是否所有玩家都准备好了（拥有 "ready" 标签）
+const allReady = players.every(player => player.hasTag("ready"));
+
+if (allReady && players.length > 0) {
+    world.sendMessage("§a所有玩家已准备就绪，游戏即将开始！§r");
+}
+```
+
+### reduce：统计和汇总
+
+```js title="scripts/main.js"
+import { world } from "@minecraft/server";
+
+const players = world.getPlayers();
+
+// 统计所有玩家的总经验等级
+const totalLevel = players.reduce((sum, player) => {
+    return sum + player.level;
+}, 0);
+
+const avgLevel = players.length > 0
+    ? Math.round(totalLevel / players.length)
+    : 0;
+
+world.sendMessage(`全服平均等级：${avgLevel}`);
+```
+
+---
+
+## 3.2.5 按名字查找玩家：几种方式的比较
+
+在实际开发中，"根据名字找到某个玩家"是一个极其常见的需求。有几种方式可以实现，各有特点：
+
+**方式一：使用过滤器（推荐）**
+
+```js
+const player = world.getPlayers({ name: "Steve" })[0] ?? null;
+```
+
+最简洁，直接在获取时过滤，性能也最好。
+:::note
+在编写有关代码时，一定要记住 `.getPlayers()` 获取的是一个数组。初学者经常会认为自己过滤器过滤出是一个单一的玩家。但事实上，尽管数组里只有一个对象，它也是一个数组。因此必须要表明 `[0]`，代表获取数组中的第一个对象。
+:::
+
+**方式二：使用 find**
+
+```js
+const player = specificPlayers.find(p => p.name === "Steve") ?? null;
+```
+
+语义清晰，如果你已经有了一个玩家列表（比如已经过滤过了），用 `find` 更自然。
+
+**方式三：大小写不敏感的查找**
+
+```js
+const targetName = "steve";  // 玩家输入的名字，可能大小写不对
+const player = world.getPlayers().find(
+    p => p.name.toLowerCase() === targetName.toLowerCase()
+) ?? null;
+```
+
+当需要容错处理时有用，比如玩家输入指令时大小写可能不准确。
+
+把这些封装成一个工具函数，在项目里统一使用：
+
+```js title="scripts/playerUtils.js"
+import { world } from "@minecraft/server";
+
+// 按名字精确查找玩家（区分大小写）
+export function getPlayerByName(name) {
+    return world.getPlayers({ name })[0] ?? null;
+}
+
+// 按名字模糊查找玩家（不区分大小写）
+export function findPlayerByNameInsensitive(name) {
+    const lowerName = name.toLowerCase();
+    return world.getPlayers().find(
+        p => p.name.toLowerCase() === lowerName
+    ) ?? null;
+}
+
+// 按名字前缀模糊查找（比如输入 "Ste" 能找到 "Steve"）
+export function findPlayerByPrefix(prefix) {
+    const lowerPrefix = prefix.toLowerCase();
+    const matches = world.getPlayers().filter(
+        p => p.name.toLowerCase().startsWith(lowerPrefix)
+    );
+
+    // 如果只有一个匹配，直接返回
+    if (matches.length === 1) return matches[0];
+
+    // 多个匹配或没有匹配，返回整个数组让调用者处理
+    return matches;
+}
+```
+
+---
+
+## 3.2.6 安全地处理可能失效的玩家对象
+
+这是一个非常重要的实际问题，初学者很容易忽略。
+
+**问题描述：**
+
+你在某个时刻获取了一个玩家对象，然后在稍后（比如延迟任务里，或者复杂操作的中间）使用它。但在这段时间里，玩家可能已经退出了游戏。此时这个玩家对象的状态是不可预测的，调用它的某些方法可能会抛出错误。
+
+```js title="scripts/main.js（危险示例）"
+import { world, system } from "@minecraft/server";
+
+world.afterEvents.playerSpawn.subscribe(({ player }) => {
+    const name = player.name;
+
+    // 5秒后发消息
+    system.runTimeout(() => {
+        // 危险！player 可能在这5秒里已经离线
+        player.sendMessage("5秒过去了！");  // 可能抛出错误
+    }, 100);
+});
+```
+
+**解决方案一：在延迟任务里重新查找玩家**
+
+```js title="scripts/main.js"
+import { world, system } from "@minecraft/server";
+
+world.afterEvents.playerSpawn.subscribe(({ player }) => {
+    const playerName = player.name;  // 只保存名字，不保存对象
+
+    system.runTimeout(() => {
+        // 重新查找，如果玩家离线了，getPlayerByName 返回 null
+        const currentPlayer = world.getPlayers({ name: playerName })[0];
+
+        // 检查玩家是否仍然在线
+        if (!currentPlayer) {
+            console.log(`${playerName} 已经离线，取消发送消息。`);
+            return;
+        }
+
+        currentPlayer.sendMessage("5秒过去了！");
+    }, 100);
+});
+```
+
+**解决方案二：使用 isValid 检查**
+
+```js title="scripts/main.js"
+import { world, system } from "@minecraft/server";
+
+world.afterEvents.playerSpawn.subscribe(({ player }) => {
+    system.runTimeout(() => {
+        // 如果 isValid 不存在则跳过检查
+        if (!player.isValid) {
+            return;
+        }
+        player.sendMessage("5秒过去了！");
+    }, 100);
+});
+```
+
+:::tip
+在编写涉及延迟的代码时，应先检查查找结果是否为 `null`，确认玩家或实体仍然存在，再执行操作。
+:::
+
+---
+
+## 3.2.7 玩家列表的排序
+
+有时候需要对玩家列表按某个属性排序，比如按等级、按血量、按名字字母顺序。回顾第一章的 `sort` 方法：
+
+```js title="scripts/main.js"
+import { world } from "@minecraft/server";
+
+const players = world.getPlayers();
+
+// 按经验等级从高到低排序
+const byLevel = [...players].sort((a, b) => b.level - a.level);
+byLevel.forEach((player, index) => {
+    console.log(`第 ${index + 1} 名：${player.name}（等级 ${player.level}）`);
+});
+
+// 按名字字母顺序排序
+const byName = [...players].sort((a, b) => a.name.localeCompare(b.name));
+byName.forEach(player => {
+    console.log(player.name);
+});
+
+// 按血量从低到高排序（找出最需要帮助的玩家）
+const byHealth = [...players].sort((a, b) => {
+    const healthA = a.getComponent("minecraft:health")?.currentValue ?? 20;
+    const healthB = b.getComponent("minecraft:health")?.currentValue ?? 20;
+    return healthA - healthB;
+});
+```
+
+:::note
+注意这里使用了 `[...players]` 来创建数组的副本再排序。因为 `sort` 会直接修改原数组，如果不复制，原来的 `players` 数组顺序也会被改变。这在某些情况下可能导致后续操作出现意外结果。
+
+养成对数组排序前先复制的习惯，是一个好的防御性编程实践。
+:::
+
+---
+
+## 3.2.8 分组：把玩家按条件分类
+
+有时候需要把玩家分成几组，分别处理。手动用多个 `filter` 可以实现，但如果分组条件复杂，可以写一个通用的分组函数：
+
+```js title="scripts/playerUtils.js"
+import { world, GameMode } from "@minecraft/server";
+
+// 把玩家按游戏模式分组
+export function groupPlayersByGameMode() {
+    const groups = {
+        survival: [],
+        creative: [],
+        adventure: [],
+        spectator: [],
+    };
+
+    for (const player of world.getPlayers()) {
+        switch (player.getGameMode()) {
+            case GameMode.Survival:
+                groups.survival.push(player);
+                break;
+            case GameMode.Creative:
+                groups.creative.push(player);
+                break;
+            case GameMode.Adventure:
+                groups.adventure.push(player);
+                break;
+            case GameMode.Spectator:
+                groups.spectator.push(player);
+                break;
+        }
+    }
+
+    return groups;
+}
+
+// 把玩家按是否是 OP 分成两组
+export function separateOpPlayers() {
+    const ops = [];
+    const regulars = [];
+
+    for (const player of world.getPlayers()) {
+        if (player.playerPermissionLevel===2) {
+            ops.push(player);
+        } else {
+            regulars.push(player);
+        }
+    }
+
+    return { ops, regulars };
+}
+```
+
+使用示例：
+
+```js title="scripts/main.js"
+import { world } from "@minecraft/server";
+import { groupPlayersByGameMode, separateOpPlayers } from "./playerUtils.js";
+
+world.afterEvents.chatSend.subscribe(({ sender, message }) => {
+    if (message === "!分组信息") {
+        const groups = groupPlayersByGameMode();
+        const { ops, regulars } = separateOpPlayers();
+
+        sender.sendMessage([
+            `生存模式：${groups.survival.length} 人`,
+            `创造模式：${groups.creative.length} 人`,
+            `管理员：${ops.map(p => p.name).join("、") || "无"}`,
+        ].join("\n"));
+    }
+});
+```
+
+---
+
+## 3.2.9 实战：一个完整的玩家列表管理系统
+
+综合这一节的所有知识，构建一个完整的玩家查询和管理模块：
+
+```js title="scripts/playerManager.js"
+import { world, GameMode } from "@minecraft/server";
+
+// =============================================
+// 查询函数
+// =============================================
+
+// 按名字查找玩家（精确匹配）
+export function getPlayerByName(name) {
+    return world.getPlayers({ name })[0] ?? null;
+}
+
+// 获取所有在线玩家名字列表
+export function getOnlinePlayerNames() {
+    return world.getPlayers().map(p => p.name);
+}
+
+// 获取在线玩家数量
+export function getOnlineCount() {
+    return world.getPlayers().length;
+}
+
+// 判断指定名字的玩家是否在线
+export function isPlayerOnline(name) {
+    return world.getPlayers({ name }).length > 0;
+}
+
+// 获取距离某个坐标最近的玩家
+export function getNearestPlayer(location) {
+    const players = world.getPlayers();
+    if (players.length === 0) return null;
+
+    return players.reduce((nearest, player) => {
+        const distToNearest = getDistance(nearest.location, location);
+        const distToCurrent = getDistance(player.location, location);
+        return distToCurrent < distToNearest ? player : nearest;
+    });
+}
+
+// 计算两个坐标之间的距离
+function getDistance(locA, locB) {
+    const dx = locA.x - locB.x;
+    const dy = locA.y - locB.y;
+    const dz = locA.z - locB.z;
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
+}
+
+// =============================================
+// 批量操作函数
+// =============================================
+
+// 向所有玩家发送消息（带安全检查）
+export function broadcastToAll(message) {
+    for (const player of world.getPlayers()) {
+        player.sendMessage(message);
+    }
+}
+
+// 向满足条件的玩家发送消息
+export function broadcastToFiltered(message, filterFn) {
+    world.getPlayers()
+        .filter(filterFn)
+        .forEach(player => player.sendMessage(message));
+}
+
+// 向生存模式的玩家广播
+export function broadcastToSurvival(message) {
+    broadcastToFiltered(message, p =>
+        p.getGameMode() === GameMode.survival
+    );
+}
+
+// 向 OP 玩家广播
+export function broadcastToOps(message) {
+    broadcastToFiltered(message, p => p.playerPermissionLevel===2);
+}
+
+// =============================================
+// 统计函数
+// =============================================
+
+// 生成在线玩家的统计报告
+export function getPlayerReport() {
+    const players = world.getPlayers();
+
+    if (players.length === 0) {
+        return "当前没有玩家在线。";
+    }
+
+    const byMode = groupPlayersByMode(players);
+    const lines = [
+        `§l在线玩家统计（共 ${players.length} 人）§r`,
+        `生存模式：${byMode.survival} 人`,
+        `创造模式：${byMode.creative} 人`,
+        `冒险模式：${byMode.adventure} 人`,
+        `旁观模式：${byMode.spectator} 人`,
+        `玩家列表：${players.map(p => p.name).join("、")}`,
+    ];
+
+    return lines.join("\n");
+}
+
+// 内部辅助函数：统计各模式人数
+function groupPlayersByMode(players) {
+    const counts = {
+        survival: 0,
+        creative: 0,
+        adventure: 0,
+        spectator: 0,
+    };
+
+    for (const player of players) {
+        const mode = player.getGameMode();
+        if (mode === GameMode.Survival)  counts.survival++;
+        if (mode === GameMode.Creative)  counts.creative++;
+        if (mode === GameMode.Adventure) counts.adventure++;
+        if (mode === GameMode.Spectator) counts.spectator++;
+    }
+
+    return counts;
+}
+```
+
+在主文件里使用这个模块：
+
+```js title="scripts/main.js"
+import { world } from "@minecraft/server";
+import {
+    getPlayerByName,
+    isPlayerOnline,
+    broadcastToOps,
+    getPlayerReport,
+    getNearestPlayer,
+} from "./playerManager.js";
+
+world.afterEvents.chatSend.subscribe(({ sender, message }) => {
+    // !玩家信息 <名字>
+    if (message.startsWith("!玩家信息 ")) {
+        const targetName = message.slice("!玩家信息 ".length).trim();
+        const target = getPlayerByName(targetName);
+
+        if (!target) {
+            sender.sendMessage(`玩家 "${targetName}" 不在线或不存在。`);
+            return;
+        }
+
+        const { x, y, z } = target.location;
+        sender.sendMessage([
+            `§l${target.name} 的信息§r`,
+            `坐标：(${Math.floor(x)}, ${Math.floor(y)}, ${Math.floor(z)})`,
+            `等级：${target.level}`,
+            `游戏模式：${target.getGameMode()}`,
+        ].join("\n"));
+    }
+
+    // !在线统计
+    if (message === "!在线统计") {
+        sender.sendMessage(getPlayerReport());
+    }
+
+    // !最近玩家
+    if (message === "!最近玩家") {
+        const nearest = getNearestPlayer(sender.location);
+        if (!nearest || nearest.name === sender.name) {
+            sender.sendMessage("附近没有其他玩家。");
+            return;
+        }
+        sender.sendMessage(`离你最近的玩家是 ${nearest.name}。`);
+    }
+});
+```
+
+---
+
+## 本节知识总结
+
+| 操作 | 代码 | 说明 |
+|------|------|------|
+| 获取所有玩家 | `world.getPlayers()` | 返回当前在线玩家数组 |
+| 按名字获取 | `world.getPlayers({ name })` | 返回名字匹配的玩家数组 |
+| 按游戏模式获取 | `world.getPlayers({ gameMode })` | 返回指定模式的玩家数组 |
+| 按标签获取 | `world.getPlayers({ tags: ["tag"] })` | 返回拥有指定标签的玩家数组 |
+| 按距离获取 | `world.getPlayers({ location, maxDistance })` | 返回指定范围内的玩家数组 |
+| 遍历玩家 | `for (const player of players)` | 对每个玩家执行操作 |
+| 筛选玩家 | `players.filter(p => 条件)` | 返回满足条件的玩家子集 |
+| 查找玩家 | `players.find(p => 条件)` | 返回第一个满足条件的玩家 |
+| 提取信息 | `players.map(p => p.name)` | 把玩家数组转换为其他数组 |
+| 整体判断 | `players.some/every(p => 条件)` | 判断是否有/所有玩家满足条件 |
+| 汇总统计 | `players.reduce(...)` | 统计汇总玩家数据 |
+| 安全使用延迟 | 保存名字，延迟时重新查找 | 避免玩家离线后操作失效对象 |
+
+---
+
+## 课后练习
+
+**练习1：** 实现一个 `!踢出 <玩家名>` 指令，只有 OP 才能使用。找到目标玩家后，向他发送一条"你被踢出了服务器"的消息模拟被踢出。如果目标玩家不在线，向指令发起者回复"该玩家不在线"。
+
+**练习2：** 实现一个 `!排行榜` 指令，按玩家的经验等级（`player.level`）从高到低排列所有在线玩家，显示前5名的名字和等级。如果在线人数不足5人，显示所有人。格式参考：
+
+```
+=== 等级排行榜 ===
+1. Herobrine - 等级 50
+2. Notch - 等级 45
+3. Steve - 等级 30
+```
+
+**练习3（思考题）：** 在 3.2.6 中，我们介绍了"只保存玩家名字，延迟时重新查找"的安全模式。但如果服务器上有两个名字不同但同时在线的玩家，然后其中一个退出，另一个还在，重新查找时能确保找到的是同一个玩家吗？在什么极端情况下，仅仅依靠名字来标识玩家会出现问题？有没有更可靠的方式？（提示：思考一下玩家是否有唯一 ID。）
+
+---
+
+> **下一节预告：3.3 玩家对象的属性与方法**
+>
+> 现在你已经知道了如何获取玩家对象，下一步是深入了解这个对象本身。玩家对象（`Player`）上有大量的属性和方法：名字、等级、游戏模式、所在维度、是否是 OP……下一节我们将系统地梳理玩家对象的完整能力。

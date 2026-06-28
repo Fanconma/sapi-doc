@@ -1,0 +1,726 @@
+---
+sidebar_position: 8
+---
+# 1.8 小结与过渡
+
+## 前言：回望来时的路
+
+从第一节到现在，你走过了一段不短的路程。
+
+如果你是第一次接触编程，能坚持到这里，本身就已经很了不起了。编程学习的早期阶段往往是最难熬的——概念抽象、语法陌生、看不到和实际应用的联系。但你撑过来了。
+
+在正式进入 Minecraft Script API 的核心开发之前，我们先停下来，把前七节学过的所有东西系统地梳理一遍。这有助于让你清楚地看到每个概念的位置，以及它们之间是如何互相配合的。
+
+---
+
+## 1.8.1 你已经学会了什么
+
+让我们按照章节顺序，快速回顾每一节的核心内容。
+
+### 1.1 变量与数据存储
+
+你学会了用变量来让程序"记住"数据。
+
+```javascript
+// 用 const 存储不会变化的数据
+const SERVER_NAME = "我的MC服务器";
+const MAX_PLAYERS = 20;
+
+// 用 let 存储会变化的数据
+let onlineCount = 0;
+let currentWeather = "晴天";
+
+// 四种基本数据类型
+let playerName = "Steve";        // 字符串
+let playerHealth = 20;           // 数字
+let isAdmin = false;             // 布尔值
+let targetEntity = null;         // 空值
+
+// 模板字符串让拼接文字更方便
+console.log(`${playerName} 当前血量：${playerHealth}`);
+```
+
+**这个知识在 Script API 里的作用：** 几乎所有操作都从获取数据开始。玩家的名字、坐标、血量，服务器的配置参数，事件的详细信息——全都需要用变量来存储和传递。
+
+---
+
+### 1.2 条件判断与逻辑控制
+
+你学会了让程序根据不同情况做出不同的反应。
+
+```javascript
+// if...else if...else 处理多种情况
+if (playerHealth <= 0) {
+    console.log("玩家已死亡");
+} else if (playerHealth <= 5) {
+    console.log("血量危急");
+} else if (playerHealth <= 10) {
+    console.log("血量偏低");
+} else {
+    console.log("状态良好");
+}
+
+// 逻辑运算符组合条件
+if (playerHealth < 5 && !hasFireResistance) {
+    console.log("处于极度危险状态！");
+}
+
+// 三元运算符处理简单的二选一
+let status = isAdmin ? "管理员" : "普通玩家";
+```
+
+**这个知识在 Script API 里的作用：** 所有事件处理的核心都是判断。判断触发事件的是不是玩家，判断玩家的状态是否满足某个条件，判断操作是否应该被允许。没有条件判断，脚本就只能无差别地对所有情况做同样的处理，几乎毫无用处。
+
+---
+
+### 1.3 函数与事件处理
+
+你学会了把代码打包成可以复用的单元，以及如何让代码响应游戏里发生的事件。
+
+```javascript
+// 定义函数，封装可复用的逻辑
+function getHealthStatus(health) {
+    if (health <= 5)  return "危险";
+    if (health <= 10) return "偏低";
+    return "良好";
+}
+
+// 箭头函数，更简洁的写法
+const formatPlayer = (name, level) => `${name}（等级 ${level}）`;
+
+// 事件处理：Script API 的核心机制
+world.afterEvents.playerSpawn.subscribe(({ player }) => {
+    const status = getHealthStatus(
+        player.getComponent("minecraft:health").currentValue
+    );
+    player.sendMessage(`欢迎回来！当前状态：${status}`);
+});
+```
+
+**这个知识在 Script API 里的作用：** Script API 本质上就是一个大型的事件驱动系统。你写的几乎每一行有意义的代码，都在某个事件的回调函数里，或者被某个事件的回调函数调用。函数是组织这些代码的基本单位。
+
+---
+
+### 1.4 循环与批量操作
+
+你学会了让程序自动重复执行操作，处理一批数据。
+
+```javascript
+// for 循环，适合已知次数的重复
+for (let i = 1; i <= 10; i++) {
+    console.log(`第 ${i} 次检查`);
+}
+
+// for...of 循环，遍历集合里的每个元素
+const players = world.getPlayers();
+for (let player of players) {
+    player.sendMessage("全服公告：服务器即将重启！");
+}
+
+// break 和 continue 控制循环流程
+for (let player of players) {
+    if (player.isBanned) continue;   // 跳过封禁玩家
+    if (targetFound) break;          // 找到目标就停止
+}
+```
+
+**这个知识在 Script API 里的作用：** 服务器里永远不止一个玩家，不止一个实体，不止一个方块。批量处理是家常便饭。每次执行全服公告、全服检查、区域扫描，背后都是循环在工作。
+
+---
+
+### 1.5 对象与数组
+
+你学会了用更复杂的数据结构来组织相关联的数据。
+
+```javascript
+// 对象：把相关数据打包在一起
+const player = {
+    name: "Steve",
+    health: 20,
+    position: { x: 100, y: 64, z: -200 },
+    inventory: ["钻石剑", "钻石镐"]
+};
+
+// 访问属性
+console.log(player.name);
+console.log(player.position.x);
+
+// 数组：有序的数据列表
+const onlinePlayers = ["Steve", "Alex", "Notch"];
+console.log(onlinePlayers[0]);       // 第一个元素
+console.log(onlinePlayers.length);   // 元素总数
+
+// 解构赋值：优雅地取出数据
+const { name, health } = player;
+const [first, second] = onlinePlayers;
+```
+
+**这个知识在 Script API 里的作用：** Script API 返回给你的几乎所有数据都是对象。玩家是对象，实体是对象，方块是对象，坐标是对象，事件本身也是对象。读懂并操作这些对象，是使用 API 的基本功。
+
+---
+
+### 1.6 数组方法与集合操作
+
+你学会了用数组内置的高阶方法，高效地处理和转换数据。
+
+```javascript
+const players = world.getPlayers();
+
+// filter：筛选出满足条件的元素
+const lowHealthPlayers = players.filter(p => {
+    return p.getComponent("minecraft:health").currentValue < 5;
+});
+
+// map：把每个元素转换成另一种形式
+const playerNames = players.map(p => p.name);
+
+// find：查找第一个满足条件的元素
+const targetPlayer = players.find(p => p.name === "Steve");
+
+// some / every：整体判断
+const anyoneDying = players.some(p =>
+    p.getComponent("minecraft:health").currentValue <= 2
+);
+
+// 方法链：把多个操作串联起来
+const topPlayers = [...players]
+    .filter(p => !p.isBanned)
+    .sort((a, b) => b.level - a.level)
+    .slice(0, 3)
+    .map(p => p.name);
+```
+
+**这个知识在 Script API 里的作用：** 当你拿到玩家列表或实体列表时，很少会直接使用原始列表，通常需要过滤、排序、提取其中的某些信息。这些数组方法让数据处理变得简洁而强大。
+
+---
+
+### 1.7 异步与事件机制
+
+你建立了对异步编程的基本认识，学会了处理延迟和定时任务，了解了 Promise 和 async/await，以及 Set 和 Map 这两种特殊数据结构。
+
+```javascript
+// 延迟执行
+system.runTimeout(() => {
+    player.sendMessage("5秒后的消息");
+}, 100);
+
+// 定时重复执行
+const intervalId = system.runInterval(() => {
+    world.sendMessage("每10秒广播一次");
+}, 200);
+
+// 取消定时任务
+system.clearRun(intervalId);
+
+// Set：不重复的集合，快速判断"是否存在"
+const visitedPlayers = new Set();
+visitedPlayers.add("Steve");
+visitedPlayers.has("Steve");  // true
+
+// Map：键值对数据库，存储"玩家 → 数据"的对应关系
+const playerScores = new Map();
+playerScores.set("Steve", 1500);
+playerScores.get("Steve");    // 1500
+```
+
+**这个知识在 Script API 里的作用：** 游戏里的很多逻辑都和时间有关——延迟触发效果、周期性检查状态、限制操作频率。异步工具是实现这些逻辑不可缺少的手段。
+
+---
+
+## 1.8.2 知识之间的联系：它们如何协同工作
+
+单独来看，每个概念都是一块积木。但真正的力量来自于把它们组合起来。下面用一段代码来展示，在一个实际的 Script API 场景里，这七个章节的知识是如何同时发挥作用的：
+
+```javascript
+import { world, system } from "@minecraft/server";
+
+// ===================================================
+// 场景：一个简单的服务器积分与排行榜系统
+// ===================================================
+
+// 【1.1 变量】用 const 存储配置，用 Map/Set 管理状态
+const KILL_REWARD = 10;           // 每次击杀获得的积分
+const DEATH_PENALTY = 5;          // 每次死亡扣除的积分
+const LEADERBOARD_INTERVAL = 6000; // 排行榜播报间隔（刻）
+
+// 【1.7 Map/Set】用 Map 存储积分数据
+const playerScores = new Map();
+
+// ===================================================
+// 工具函数
+// ===================================================
+
+// 【1.3 函数】获取或初始化玩家积分
+function getScore(playerName) {
+    return playerScores.get(playerName) ?? 0;
+}
+
+// 【1.3 函数】修改玩家积分，并确保积分不低于0
+function adjustScore(playerName, delta) {
+    const currentScore = getScore(playerName);
+    const newScore = Math.max(0, currentScore + delta);
+    playerScores.set(playerName, newScore);
+    return newScore;
+}
+
+// 【1.3 函数】【1.6 数组方法】生成排行榜文本
+function buildLeaderboard() {
+    // 把 Map 转成数组，排序，取前5名
+    const ranking = [...playerScores.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+
+    // 【1.2 条件判断】如果没有数据，返回提示
+    if (ranking.length === 0) {
+        return "暂无积分数据。";
+    }
+
+    // 【1.4 循环】【1.6 map】生成排行榜每一行
+    const lines = ranking.map(([name, score], index) => {
+        const medal = index === 0 ? "冠军" : `第 ${index + 1} 名`;
+        return `${medal}：${name} - ${score} 分`;
+    });
+
+    return lines.join("\n");
+}
+
+// ===================================================
+// 事件处理
+// ===================================================
+
+// 【1.3 事件处理】玩家加入时初始化积分
+world.afterEvents.playerSpawn.subscribe(({ player }) => {
+    const name = player.name;
+
+    // 【1.2 条件判断】只对首次加入的玩家初始化
+    if (!playerScores.has(name)) {
+        playerScores.set(name, 0);
+        player.sendMessage("欢迎！你的积分已初始化为 0。");
+    } else {
+        const score = getScore(name);
+        player.sendMessage(`欢迎回来！你当前的积分是 ${score} 分。`);
+    }
+});
+
+// 【1.3 事件处理】处理实体死亡事件
+world.afterEvents.entityDie.subscribe((event) => {
+    const { deadEntity, damageSource } = event;
+
+    // 【1.2 条件判断】只处理玩家相关的死亡
+    if (deadEntity.typeId !== "minecraft:player") return;
+
+    const deadName = deadEntity.name;
+
+    // 死亡玩家扣分
+    const newDeadScore = adjustScore(deadName, -DEATH_PENALTY);
+    // 【1.5 对象】通过事件对象获取击杀者信息
+    const killer = damageSource.damagingEntity;
+
+    // 【1.2 条件判断】确认击杀者存在且是玩家
+    if (killer && killer.typeId === "minecraft:player") {
+        const killerName = killer.name;
+        const newKillerScore = adjustScore(killerName, KILL_REWARD);
+
+        // 【1.1 模板字符串】构建消息
+        world.sendMessage(
+            `${killerName} 击败了 ${deadName}！` +
+            `获得 ${KILL_REWARD} 积分（当前：${newKillerScore}）`
+        );
+    }
+
+    // 单独通知死亡玩家
+    // 注意：此时玩家可能已经死亡，实际项目中需要处理这种边界情况
+    world.sendMessage(`${deadName} 死亡，扣除 ${DEATH_PENALTY} 分（剩余：${newDeadScore}）`);
+});
+
+// 【1.3 事件处理】监听聊天，响应查询指令
+world.afterEvents.chatSend.subscribe(({ sender, message }) => {
+    // 【1.2 条件判断】根据指令内容分支处理
+    if (message === "!积分") {
+        const score = getScore(sender.name);
+        sender.sendMessage(`你当前的积分：${score} 分`);
+
+    } else if (message === "!排行榜") {
+        const leaderboard = buildLeaderboard();
+        sender.sendMessage(`===== 积分排行榜 =====\n${leaderboard}`);
+    }
+});
+
+// 【1.7 定时任务】每隔一段时间自动播报排行榜
+system.runInterval(() => {
+    // 【1.6 数组方法】检查是否有在线玩家
+    const players = world.getPlayers();
+    if (players.length === 0) return;
+
+    const leaderboard = buildLeaderboard();
+    world.sendMessage(`===== 定时排行榜播报 =====\n${leaderboard}`);
+}, LEADERBOARD_INTERVAL);
+```
+
+:::info
+在这段代码中，使用了 `chatSend` 事件。遗憾的是，该事件虽早已加入 Script API 中，但从未从 beta 版移至正式版。因此你必须使用 `server-beta` 才可使用该事件。不过上述代码中的 `chatSend` 事件可以使用创建自定义指令功能替代。有关内容会在第2章有关章节提到。
+:::
+你看，在这一段代码里：
+- **1.1** 提供了变量和常量来存储配置和数据
+- **1.2** 的条件判断控制了每个操作的执行时机
+- **1.3** 的函数把逻辑模块化，事件处理连接了游戏和代码
+- **1.4** 的循环思维体现在 `map` 和遍历操作里
+- **1.5** 的对象让我们能读取事件和玩家的信息
+- **1.6** 的数组方法让排行榜的生成优雅而简洁
+- **1.7** 的 `Map` 管理数据，定时任务处理周期性播报
+
+这就是这七节知识的真正价值：不是单独使用，而是协同工作。
+
+---
+
+## 1.8.3 常见误区与注意事项
+
+在正式进入 Script API 的学习之前，整理几个初学者最容易踩的坑，提前帮你规避。
+
+### 误区一：混淆 `=`、`==` 和 `===`
+
+```javascript
+let health = 20;
+
+health = 10;       // 赋值，把 health 的值改为 10
+health == 10;      // 宽松相等比较，不推荐使用
+health === 10;     // 严格相等比较，推荐使用
+
+// 常见错误：在 if 里用了赋值而不是比较
+if (health = 5) {  // 错误！这是在赋值，不是比较
+    console.log("血量是5");
+}
+
+if (health === 5) {  // 正确
+    console.log("血量是5");
+}
+```
+
+### 误区二：数组下标从 0 开始，不是从 1 开始
+
+```javascript
+const players = ["Steve", "Alex", "Notch"];
+
+console.log(players[1]);  // 输出：Alex，不是 Steve
+console.log(players[0]);  // 输出：Steve（第一个元素）
+console.log(players[3]);  // 输出：undefined（越界）
+```
+
+### 误区三：认为异步代码会"等在那里"
+
+```javascript
+let playerData = null;
+
+system.runTimeout(() => {
+    playerData = { name: "Steve" };
+}, 20);
+
+// 错误：这里 playerData 还是 null，因为延迟任务还没执行
+console.log(playerData.name);  // 报错！
+
+// 正确做法：需要在延迟任务里使用数据
+system.runTimeout(() => {
+    playerData = { name: "Steve" };
+    console.log(playerData.name);  // 在这里用才对
+}, 20);
+```
+
+### 误区四：忘记处理 null 和 undefined
+
+```javascript
+// 在 Script API 中，很多操作可能返回 null
+const player = world.getPlayers().find(p => p.name === "SomePlayer");
+
+// 错误：如果找不到玩家，player 是 undefined，直接访问会报错
+player.sendMessage("你好");  // 报错！Cannot read property of undefined
+
+// 正确：先检查是否存在
+if (player) {
+    player.sendMessage("你好");
+}
+```
+
+### 误区五：在 forEach 里用 break
+
+```javascript
+const players = ["Steve", "Alex", "Notch"];
+
+// 错误：forEach 不支持 break
+players.forEach(name => {
+    if (name === "Alex") break;  // 语法错误！
+});
+
+// 正确：改用 for...of
+for (let name of players) {
+    if (name === "Alex") break;  // 正常工作
+}
+```
+
+### 误区六：直接修改被 const 声明的对象，以为会报错
+
+```javascript
+const player = { name: "Steve", health: 20 };
+
+player.health = 15;  // 这是合法的！const 不阻止修改对象内部属性
+player = {};         // 这才会报错，不能重新赋值整个变量
+```
+
+---
+
+## 1.8.4 进入 Script API：接下来会学什么
+
+掌握了这七节的 JavaScript 基础之后，你已经具备了进入 Minecraft Script API 核心开发的能力。在接下来的章节里，我们将从 JavaScript 基础过渡到真正的 API 使用，你会遇到以下这些主题：
+
+**第二章：Script API 基础架构**
+
+你将了解 Script API 的整体结构，学习如何创建一个可以正常运行的脚本插件，理解 `@minecraft/server` 模块里都有什么，以及如何正确地使用 `import`。
+
+```javascript
+// 这将成为你每个脚本文件的开头
+import { world, system, Player, Entity } from "@minecraft/server";
+```
+
+**第三章：玩家与实体操作**
+
+你将学习如何获取玩家对象、读取玩家的各种属性、对玩家执行各种操作，以及如何处理世界里的其他实体。
+
+```javascript
+// 你将能够熟练操作这样的代码
+const player = event.player;
+const health = player.getComponent("minecraft:health").currentValue;
+const location = player.location;
+player.sendMessage("你好！");
+player.teleport({ x: 0, y: 64, z: 0 });
+```
+
+**第四章：方块与世界操作**
+
+你将学习如何读取和修改世界里的方块，如何获取维度信息，如何在指定位置生成实体或粒子效果。
+
+**第五章：数据存储与持久化**
+
+你将学习如何让数据在游戏重启后也能保留，了解动态属性（Dynamic Properties）的使用方式。
+
+**第六章：进阶事件与复杂逻辑**
+
+你将接触更多种类的游戏事件，学习如何构建更复杂的游戏逻辑，以及如何让多个系统协同工作。
+
+---
+
+## 1.8.5 一个完整的"最小可用脚本"
+
+在结束这一章之前，让我们看一个真正可以放进 Minecraft 里运行的完整脚本，把所有的基础知识串联起来，同时也让你感受一下正式开发时代码的完整形态：
+
+```javascript
+import { world, system } from "@minecraft/server";
+
+// ===================================================
+// 配置区：修改这里来自定义脚本行为
+// ===================================================
+const CONFIG = {
+    welcomeDelay: 60,           // 欢迎消息的延迟发送时间（刻）
+    broadcastInterval: 2400,    // 定时广播的间隔（刻，约2分钟）
+    lowHealthThreshold: 6,      // 低血量警告的触发阈值
+    messages: {
+        welcome: "欢迎来到服务器！",
+        rules: "请遵守服务器规则，祝游戏愉快。",
+        lowHealth: "你的血量过低，请注意安全！"
+    }
+};
+
+// ===================================================
+// 状态管理
+// ===================================================
+const joinedPlayers = new Set();  // 记录已加入过的玩家（避免重复初始化）
+const playerJoinTime = new Map(); // 记录每个玩家的加入时间
+
+// ===================================================
+// 工具函数
+// ===================================================
+
+function getPlayerHealth(player) {
+    const healthComp = player.getComponent("minecraft:health");
+    return healthComp ? healthComp.currentValue : 20;
+}
+
+function formatPlayTime(ticks) {
+    const totalSeconds = Math.floor(ticks / 20);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes} 分 ${seconds} 秒`;
+}
+
+function broadcastOnlineList() {
+    const players = world.getPlayers();
+    if (players.length === 0) return;
+
+    const names = players.map(p => p.name).join("、");
+    world.sendMessage(`[在线玩家 ${players.length} 人] ${names}`);
+}
+
+// ===================================================
+// 事件处理
+// ===================================================
+
+// 玩家加入事件
+world.afterEvents.playerSpawn.subscribe(({ player, initialSpawn }) => {
+    const name = player.name;
+    const isFirstJoin = !joinedPlayers.has(name);
+
+    // 记录加入时间
+    playerJoinTime.set(name, Date.now());
+
+    if (isFirstJoin) {
+        // 首次加入的完整流程
+        joinedPlayers.add(name);
+
+        world.sendMessage(`欢迎新玩家 ${name} 加入服务器！`);
+
+        // 延迟发送规则提示，避免消息刷屏
+        system.runTimeout(() => {
+            player.sendMessage(CONFIG.messages.welcome);
+        }, CONFIG.welcomeDelay);
+
+        system.runTimeout(() => {
+            player.sendMessage(CONFIG.messages.rules);
+        }, CONFIG.welcomeDelay * 2);
+
+    } else if (initialSpawn) {
+        // 重新登录的玩家
+        player.sendMessage(`欢迎回来，${name}！`);
+    }
+});
+
+// 实体受伤事件：检测玩家低血量
+world.afterEvents.entityHurt.subscribe((event) => {
+    const entity = event.hurtEntity;
+
+    if (entity.typeId !== "minecraft:player") return;
+
+    const health = getPlayerHealth(entity);
+
+    if (health <= CONFIG.lowHealthThreshold && health > 0) {
+        entity.sendMessage(CONFIG.messages.lowHealth);
+    }
+});
+
+// 聊天事件：响应玩家指令
+world.afterEvents.chatSend.subscribe(({ sender, message }) => {
+    if (!message.startsWith("!")) return;
+
+    const command = message.toLowerCase();
+    const name = sender.name;
+
+    if (command === "!在线") {
+        const players = world.getPlayers();
+        const names = players.map(p => p.name).join("、");
+        sender.sendMessage(`当前在线（${players.length} 人）：${names}`);
+
+    } else if (command === "!血量") {
+        const health = getPlayerHealth(sender);
+        const maxHealth = 20;
+        const percentage = Math.round((health / maxHealth) * 100);
+        sender.sendMessage(`你的血量：${health} / ${maxHealth}（${percentage}%）`);
+
+    } else if (command === "!时长") {
+        const joinTime = playerJoinTime.get(name);
+        if (joinTime) {
+            const elapsed = Math.floor((Date.now() - joinTime) / 50); // 转换为刻
+            sender.sendMessage(`本次游玩时长：${formatPlayTime(elapsed)}`);
+        }
+
+    } else if (command === "!帮助") {
+        sender.sendMessage("可用指令：!在线 | !血量 | !时长 | !帮助");
+    }
+});
+
+// ===================================================
+// 定时任务
+// ===================================================
+
+// 定时广播在线玩家列表
+system.runInterval(() => {
+    broadcastOnlineList();
+}, CONFIG.broadcastInterval);
+
+console.log("[脚本] 服务器脚本已成功加载。");
+```
+
+这个脚本虽然不复杂，但它是一个真正可以运行的完整插件，里面的每一行代码，你现在都应该能看懂了。
+:::info
+与上文一致，此处 `chatSend` 的事件需要使用 beta 版的 Script API 才可使用。为了利于读者理解，这里暂时使用了较为简单的“伪指令”作为演示。后续将学习如何创建真正的指令。
+:::
+
+---
+
+## 1.8.6 给自己的几条建议
+
+在正式进入更深入的 Script API 学习之前，有几点经验之谈想分享给你。
+
+**多写，少看。**
+
+读教程能让你理解概念，但真正的掌握来自于自己动手写代码。每学完一个知识点，都要尝试自己从零写一个相关的例子，而不只是看懂示例代码就停下。
+
+**报错不是敌人。**
+
+初学者往往一看到报错信息就慌了。实际上，报错信息是程序在告诉你哪里出了问题，是你最好的调试助手。养成仔细阅读报错信息的习惯，搞清楚它说的是什么，而不是看到红字就手足无措。
+
+**遇到问题，先自己想。**
+
+当代码不按预期工作时，先停下来想一想：数据是对的吗？用 `console.log` 把中间的变量值打印出来看看。执行顺序是对的吗？是不是异步的问题？经过自己思考之后再去查资料，这个过程本身就是最好的学习。
+
+**代码可读性和代码能跑，同样重要。**
+
+能跑的代码不一定是好代码。好的代码是能跑、能读、能维护的代码。变量命名要有意义，函数要做单一职责的事，复杂的逻辑要加注释。三个月后回来看自己的代码，如果你看不懂，那说明当时写得不够好。
+
+**不要跳步。**
+
+学习是线性的，每一节都建立在前一节的基础上。如果某个概念没有完全搞清楚，不要急着跳到下一节。回过头来再读一遍，或者自己多写几个例子，直到真正理解了再继续。
+
+---
+
+## 本章完整知识清单
+
+在结束之前，把这一章涉及的所有核心概念做一个最终汇总：
+
+**变量与类型**
+
+`let`、`const`、`var`（不推荐）、Number、String、Boolean、null、undefined、模板字符串、`typeof`
+
+**运算符**
+
+算术运算符（`+` `-` `*` `/` `%` `**`）、赋值运算符（`=` `+=` `-=` 等）、比较运算符（`===` `!==` `>` `<` `>=` `<=`）、逻辑运算符（`&&` `||` `!`）、三元运算符（`? :`）、空值合并运算符（`??`）、展开运算符（`...`）
+
+**流程控制**
+
+`if`、`else if`、`else`、`switch`、`break`（switch 和循环）、`continue`、`return`
+
+**循环**
+
+`while`、`do...while`、`for`、`for...of`、`for...in`
+
+**函数**
+
+函数声明、函数表达式、箭头函数、参数与默认参数、返回值、作用域（全局/局部）、回调函数
+
+**对象**
+
+创建对象、点语法、方括号语法、方法、嵌套对象、`delete`、`for...in`、解构赋值、展开运算符
+
+**数组**
+
+创建数组、下标访问、`length`、`push`/`pop`/`shift`/`unshift`、`indexOf`/`includes`、`slice`/`splice`/`concat`、`forEach`、`filter`、`map`、`find`/`findIndex`、`some`/`every`、`reduce`、`sort`、方法链、解构赋值
+
+**异步**
+
+同步与异步的概念、回调函数、`system.runTimeout`、`system.runInterval`、`system.clearRun`、Promise、`async/await`、`try...catch`
+
+**特殊数据结构**
+
+`Set`（`.add()`、`.has()`、`.delete()`、`.size`）、`Map`（`.set()`、`.get()`、`.has()`、`.delete()`、`.size`）
+
+---
+
+> **第二章预告：Script API 基础架构**
+>
+> 从下一章开始，我们正式进入 Minecraft Script API 的世界。第一步是搭建开发环境、理解脚本插件的文件结构，以及掌握 `@minecraft/server` 模块的基本用法。你会第一次把代码真正地跑进 Minecraft，看到它在游戏里实际生效的那一刻，一切之前的学习都会变得格外值得。

@@ -1,0 +1,642 @@
+---
+sidebar_position: 2
+---
+# 1.2 条件判断与逻辑控制
+
+## 前言：让程序学会"做决定"
+
+在上一节中，我们学会了用变量来存储数据。但是光存储数据还远远不够。
+
+回想一下你在玩 Minecraft 的时候：当血量低于某个值，你会选择逃跑；当背包里有足够的材料，你才能合成某样东西；当天色变暗，你知道该回家了。你的大脑每时每刻都在做这样的判断。
+
+程序也需要做判断。让程序能够根据不同的情况执行不同的操作，这就是**条件判断**的意义。
+
+---
+
+## 1.2.1 比较运算符：做判断的基础工具
+
+在做条件判断之前，我们需要先学会如何"比较"两个值。比较的结果只有两种：`true`（条件成立）或 `false`（条件不成立）。
+
+你在数学课上学过大于、小于、等于，JavaScript 里也有对应的符号：
+
+| 运算符 | 含义 | 示例 | 结果 |
+|--------|------|------|------|
+| `>` | 大于 | `10 > 5` | `true` |
+| `<` | 小于 | `3 < 1` | `false` |
+| `>=` | 大于或等于 | `20 >= 20` | `true` |
+| `<=` | 小于或等于 | `5 <= 3` | `false` |
+| `===` | 严格相等 | `"Steve" === "Steve"` | `true` |
+| `!==` | 严格不相等 | `10 !== 5` | `true` |
+
+这些运算符的结果都是布尔值，你可以直接把它们存进变量：
+
+```javascript
+let playerHealth = 8;
+
+let isHealthLow = playerHealth < 10;   // 血量低于10吗？低于。因此该变量目前实际存储内容为true
+console.log(isHealthLow);              // 输出：true
+
+let isFullHealth = playerHealth === 20; // 满血吗？不满。因此该变量存储内容为false
+console.log(isFullHealth);             // 输出：false
+```
+
+:::warning
+关于相等判断，有一个非常重要的细节需要注意。
+
+JavaScript 里有两种相等判断：
+- `==`（宽松相等）：会尝试转换类型再比较
+- `===`（严格相等）：类型和值都必须相同
+
+举个例子：
+```javascript
+console.log(1 == "1");    // true（宽松相等，字符串"1"被转成了数字1）
+console.log(1 === "1");   // false（严格相等，一个是数字，一个是字符串，类型不同）
+```
+
+`==` 的这种自动类型转换行为很容易造成难以察觉的 Bug。**请始终使用 `===` 和 `!==`**，而不要使用 `==` 和 `!=`。
+:::
+
+---
+
+## 1.2.2 if 语句：最基本的条件判断
+
+`if` 语句的含义就是中文里的"如果"：**如果某个条件成立，就执行某段代码。**
+
+基本语法结构如下：
+
+```javascript
+if (条件) {
+    // 条件成立时，执行这里的代码
+}
+```
+
+一个真实的例子：
+
+```javascript
+let playerHealth = 4;
+
+if (playerHealth < 5) {
+    console.log("血量危急，请立即撤退！");
+}
+```
+
+因为 `playerHealth`（4）确实小于 5，条件成立，所以这段代码会输出那条警告信息。
+
+如果我们把血量改成 15：
+
+```javascript
+let playerHealth = 15;
+
+if (playerHealth < 5) {
+    console.log("血量危急，请立即撤退！");
+}
+// 条件不成立，大括号里的代码被跳过，什么都不输出
+```
+
+**大括号 `{}` 的作用：**
+
+大括号标记了"属于这个 if 的代码范围"。在大括号里，你可以写任意多行代码，它们都只在条件成立时才会执行：
+
+```javascript
+let playerHealth = 3;
+
+if (playerHealth < 5) {
+    console.log("血量危急！");
+    console.log("正在尝试逃跑...");
+    console.log("使用了末影珍珠！");
+}
+```
+
+:::tip
+养成一个好习惯：**无论 if 语句里只有一行代码，尽量都要写大括号**。
+
+有些教程会告诉你，当 if 里只有一行时可以省略大括号：
+```javascript
+// 可以这么写，但不推荐
+if (playerHealth < 5)
+    console.log("危险！");
+```
+
+省略大括号在代码变复杂后容易导致错误，而且不容易阅读。坚持写大括号是一个让代码更安全的好习惯。
+:::
+
+---
+
+## 1.2.3 if...else：二选一
+
+`if` 可以搭配 `else` 使用，表示："如果条件成立，做 A；否则，做 B。"
+
+```javascript
+if (条件) {
+    // 条件成立时执行
+} else {
+    // 条件不成立时执行
+}
+```
+
+举个例子：
+
+```javascript
+let isDaytime = false;
+
+if (isDaytime) {
+    console.log("现在是白天，可以放心探索。");
+} else {
+    console.log("现在是夜晚，小心怪物！");
+}
+// 输出：现在是夜晚，小心怪物！
+```
+:::info
+你可以看到，在上面的例子中，`if` 的条件直接写成了 `isDaytime`，而没有任何比较运算符。实际上，这是 `isDaytime === true` 的缩略形式，在后续的编程中，你也可以在 `if` 中直接省略 `===true` 来简化代码。
+
+类似地，如果你要表示 `isDaytime === false`，你也可以直接写成 `!isDaytime`。有关 `!` 的内容，你将在接下来的内容中了解到。
+:::
+再来一个关于玩家状态的例子：
+
+```javascript
+let playerHealth = 20;
+let maxHealth = 20;
+
+if (playerHealth === maxHealth) {
+    console.log("你的血量是满的。");
+} else {
+    console.log(`你的血量不满，当前为 ${playerHealth} / ${maxHealth}。`);
+}
+```
+
+`if...else` 保证了两个分支中**必定有且只有一个**会被执行，就像一个岔路口，你只能走其中一条路。
+
+---
+
+## 1.2.4 if...else if...else：多条件分支
+
+有时候情况不只是"是"或"否"这么简单，可能有很多种情况。这时候我们用 `else if` 来添加更多分支：
+
+```javascript
+if (第一个条件) {
+    // 第一个条件成立时执行
+} else if (第二个条件) {
+    // 第一个条件不成立，但第二个条件成立时执行
+} else if (第三个条件) {
+    // 前两个都不成立，但第三个成立时执行
+} else {
+    // 以上条件都不成立时执行
+}
+```
+
+用玩家血量状态来举例：
+
+```javascript
+let playerHealth = 12;
+
+if (playerHealth <= 0) {
+    console.log("你已经死亡。");
+} else if (playerHealth <= 5) {
+    console.log("血量极低，生命危险！");
+} else if (playerHealth <= 10) {
+    console.log("血量较低，需要补血。");
+} else if (playerHealth <= 15) {
+    console.log("血量一般，保持警惕。");
+} else {
+    console.log("血量充足，状态良好。");
+}
+// playerHealth 是 12，前三个条件都不满足，第四个条件（12 <= 15）成立
+// 输出：血量一般，保持警惕。
+```
+
+:::note
+`else if` 的判断是从上到下依次进行的。一旦某个条件成立，它对应的代码块就会执行，剩下的条件**一概不再检查**。
+
+所以条件的书写顺序很重要。在上面的血量例子中，我们从最严重的情况（死亡）开始判断，逐步放宽条件。如果你把顺序反过来，把 `<= 15` 放在第一位，那么血量为 3 的玩家也会匹配到它，就不会触发"血量极低"的提示了。
+:::
+
+---
+
+## 1.2.5 逻辑运算符：组合多个条件
+
+有时候一个判断需要同时满足多个条件，或者满足其中一个就行。这时候我们用**逻辑运算符**来把多个条件组合在一起。
+
+### `&&`（逻辑与，AND）：所有条件都必须成立
+
+"A 并且 B"：只有当 A 和 B 都是 `true`，结果才是 `true`。
+
+```javascript
+let playerHealth = 18;
+let playerHunger = 16;
+
+// 血量大于15，并且饥饿值大于10，才算状态良好
+if (playerHealth > 15 && playerHunger > 10) {
+    console.log("状态良好，适合长途探险。");
+}
+// 两个条件都满足，输出：状态良好，适合长途探险。
+```
+
+只要有一个条件不满足，`&&` 的结果就是 `false`：
+
+```javascript
+let playerHealth = 18;
+let playerHunger = 4;   // 饥饿值很低
+
+if (playerHealth > 15 && playerHunger > 10) {
+    console.log("状态良好，适合长途探险。");
+} else {
+    console.log("状态不佳，先补充状态再出发。");
+}
+// playerHunger（4）不大于10，条件不全部成立
+// 输出：状态不佳，先补充状态再出发。
+```
+
+### `||`（逻辑或，OR）：至少一个条件成立即可
+
+"A 或者 B"：只要 A 或 B 中有一个是 `true`，结果就是 `true`。
+
+```javascript
+let hasWoodenSword = false;
+let hasStoneSword = true;
+
+// 有木剑或者有石剑，就可以去战斗
+if (hasWoodenSword || hasStoneSword) {
+    console.log("你有武器，可以战斗！");
+}
+// hasStoneSword 是 true，条件成立
+// 输出：你有武器，可以战斗！
+```
+
+只有两个条件都不满足，`||` 的结果才是 `false`：
+
+```javascript
+let hasWoodenSword = false;
+let hasStoneSword = false;
+
+if (hasWoodenSword || hasStoneSword) {
+    console.log("你有武器，可以战斗！");
+} else {
+    console.log("你手无寸铁，先去制作武器吧。");
+}
+// 两个都是 false
+// 输出：你手无寸铁，先去制作武器吧。
+```
+
+### `!`（逻辑非，NOT）：取反
+
+`!` 把 `true` 变成 `false`，把 `false` 变成 `true`。
+
+```javascript
+let isRaining = false;
+
+if (!isRaining) {
+    console.log("没有下雨，适合出门探险。");
+}
+// !false 等于 true，条件成立
+// 输出：没有下雨，适合出门探险。
+```
+
+`!` 的通俗理解就是"不"或"非"：`!isRaining` 读作"没有在下雨"。
+
+**组合使用示例：**
+
+```javascript
+let playerLevel = 25;
+let hasEnderPearl = true;
+let isInNether = false;
+
+// 等级大于20，并且（有末影珍珠或者不在地狱），才能开启传送门
+if (playerLevel > 20 && (hasEnderPearl || !isInNether)) {
+    console.log("条件满足，可以激活末地传送门。");
+}
+```
+
+:::tip
+当你的判断条件变得复杂时，善用括号来明确运算的优先顺序，这会让代码更容易阅读，也更不容易出错。就像数学里的加减乘除需要括号来明确先算哪个一样。
+:::
+
+---
+
+## 1.2.6 switch 语句：处理多个固定值的分支
+
+当你需要把某个变量的值和一系列**固定值**逐一比较时，用大量的 `else if` 会显得很繁琐。`switch` 语句是专门为这种场景设计的。
+
+```javascript
+switch (要判断的变量) {
+    case 值1:
+        // 变量等于值1时执行
+        break;
+    case 值2:
+        // 变量等于值2时执行
+        break;
+    case 值3:
+        // 变量等于值3时执行
+        break;
+    default:
+        // 以上值都不匹配时执行
+}
+```
+
+用一个根据生物群系选择行为的例子来演示：
+
+```javascript
+let currentBiome = "desert";
+
+switch (currentBiome) {
+    case "forest":
+        console.log("你在森林里，周围有很多树木。");
+        console.log("建议收集木材。");
+        break;
+    case "desert":
+        console.log("你在沙漠里，要小心仙人掌。");
+        console.log("这里可能有沙漠神殿。");
+        break;
+    case "ocean":
+        console.log("你在海洋里，注意潜水时间。");
+        break;
+    case "nether":
+        console.log("你在地狱，极度危险，保持警惕！");
+        break;
+    default:
+        console.log("未知的生物群系。");
+}
+// currentBiome 是 "desert"，匹配到第二个 case
+// 输出：
+// 你在沙漠里，要小心仙人掌。
+// 这里可能有沙漠神殿。
+```
+
+:::warning
+`break` 关键字非常重要，千万不要忘记写！
+
+`switch` 语句在匹配到某个 `case` 后，如果没有 `break`，它会继续往下执行下一个 `case` 里的代码，直到遇到 `break` 或者 `switch` 结束。这种行为叫做"贯穿"（fall-through），它几乎总是你不想要的结果。
+
+```javascript
+let weapon = "sword";
+
+switch (weapon) {
+    case "sword":
+        console.log("装备了剑");
+        // 没有 break！
+    case "axe":
+        console.log("装备了斧头");
+        break;
+    case "bow":
+        console.log("装备了弓");
+        break;
+}
+// 输出：
+// 装备了剑
+// 装备了斧头    <-- 这是意外执行的！
+```
+
+所以，除非你是特意利用贯穿行为（这是比较高级的用法），否则每个 `case` 末尾都要写 `break`。
+:::
+
+---
+
+## 1.2.7 三元运算符：简洁的条件赋值
+
+有时候我们只是想根据条件，给某个变量赋两个值中的一个。用完整的 `if...else` 来写有点繁琐：
+
+```javascript
+let playerHealth = 15;
+let statusMessage;
+
+if (playerHealth > 10) {
+    statusMessage = "安全";
+} else {
+    statusMessage = "危险";
+}
+```
+
+**三元运算符**可以把这四行代码压缩成一行：
+
+```javascript
+let playerHealth = 15;
+let statusMessage = playerHealth > 10 ? "安全" : "危险";
+// statusMessage 的值是 "安全"
+```
+
+三元运算符的结构是：
+
+```
+条件 ? 条件成立时的值 : 条件不成立时的值
+```
+
+读作："条件成立吗？成立就用前面的值，不成立就用后面的值。"
+
+更多例子：
+
+```javascript
+let isDaytime = true;
+let lightLevel = isDaytime ? "充足" : "黑暗";
+console.log(`当前光照：${lightLevel}`);   // 输出：当前光照：充足
+
+let playerLevel = 5;
+let canAccessArea = playerLevel >= 10 ? "允许进入" : "等级不足，禁止进入";
+console.log(canAccessArea);   // 输出：等级不足，禁止进入
+```
+
+:::note
+三元运算符适合处理**简单的**二选一赋值场景。如果你的逻辑比较复杂，或者需要执行多行代码，请老老实实使用 `if...else`。
+
+强行把复杂逻辑塞进三元运算符会让代码极难阅读，这样做省下的那几行代码完全得不偿失。
+:::
+
+---
+
+## 1.2.8 真值与假值（Truthy & Falsy）
+
+在 JavaScript 中，`if` 的括号里不是只能放布尔值。实际上，**任何值**放进去，JavaScript 都会自动判断它是"真的"还是"假的"。
+
+以下这些值被视为"假"（Falsy）：
+- `false`
+- `0`（数字零）
+- `""`（空字符串）
+- `null`
+- `undefined`
+- `NaN`（Not a Number，非数字）
+
+**除了以上这些，其他所有值都被视为"真"（Truthy）。**
+
+这个特性在实践中非常有用：
+
+```javascript
+let playerName = "";   // 空字符串，是 Falsy
+
+if (playerName) {
+    console.log(`欢迎，${playerName}！`);
+} else {
+    console.log("玩家名称不能为空！");
+}
+// 输出：玩家名称不能为空！
+```
+
+```javascript
+let diamondCount = 0;   // 数字0，是 Falsy
+
+if (diamondCount) {
+    console.log(`你有 ${diamondCount} 颗钻石。`);
+} else {
+    console.log("你没有钻石。");
+}
+// 输出：你没有钻石。
+```
+
+```javascript
+let targetPlayer = null;   // null 是 Falsy
+
+if (targetPlayer) {
+    console.log("找到了目标玩家。");
+} else {
+    console.log("没有找到目标玩家。");
+}
+// 输出：没有找到目标玩家。
+```
+
+这意味着你不需要每次都写 `=== null`、`=== 0`、`=== ""`，直接把变量放进 `if` 里判断就好了。
+
+---
+
+## 1.2.9 实战练习：玩家状态检查系统
+
+现在，让我们综合运用这一节学到的所有知识，写一个完整的玩家状态检查程序：
+
+```javascript
+// === 玩家数据 ===
+const playerName = "Alex";
+let playerHealth = 7;
+let playerHunger = 3;
+let playerLevel = 15;
+let currentBiome = "nether";
+let hasFireResistance = false;
+
+// === 开始检查 ===
+console.log(`正在检查玩家 ${playerName} 的状态...\n`);
+
+// 检查1：存活状态
+if (playerHealth <= 0) {
+    console.log("[致命] 玩家已死亡，停止所有检查。");
+} else {
+
+    // 检查2：血量状态
+    if (playerHealth <= 5) {
+        console.log("[警告] 血量极低！请立即寻找食物或安全地点。");
+    } else if (playerHealth <= 10) {
+        console.log("[提示] 血量偏低，注意补充。");
+    } else {
+        console.log("[正常] 血量状态良好。");
+    }
+
+    // 检查3：饥饿状态
+    if (playerHunger <= 3) {
+        console.log("[警告] 已经饥饿，无法自然回血，需要立即进食！");
+    } else if (playerHunger <= 6) {
+        console.log("[提示] 有些饥饿，建议尽快进食。");
+    } else {
+        console.log("[正常] 饱腹状态良好。");
+    }
+
+    // 检查4：所在环境安全性
+    switch (currentBiome) {
+        case "nether":
+            if (!hasFireResistance) {
+                console.log("[危险] 身处地狱且没有防火效果，极度危险！");
+            } else {
+                console.log("[提示] 身处地狱，但防火效果保护着你。");
+            }
+            break;
+        case "end":
+            console.log("[提示] 身处末地，注意末影人和末影龙。");
+            break;
+        default:
+            console.log("[正常] 所在环境相对安全。");
+    }
+
+    // 检查5：综合评估
+    let isInDanger = playerHealth <= 10 || playerHunger <= 3;
+    let survivalAdvice = isInDanger ? "建议立即撤退或寻找庇护所！" : "可以继续探索。";
+    console.log(`\n综合评估：${survivalAdvice}`);
+}
+```
+
+**运行结果：**
+
+```
+正在检查玩家 Alex 的状态...
+
+[提示] 血量偏低，注意补充。
+[警告] 已经饥饿，无法自然回血，需要立即进食！
+[危险] 身处地狱且没有防火效果，极度危险！
+
+综合评估：建议立即撤退或寻找庇护所！
+```
+
+试着修改 `playerHealth`、`playerHunger`、`currentBiome` 等变量的值，看看输出结果会怎么变化，以此来验证你对每一个判断逻辑的理解。
+
+---
+
+## 1.2.10 Minecraft Script API 中的实际应用预览
+
+来看看条件判断在真实 Script API 代码中的样子：
+
+```javascript
+import { world } from "@minecraft/server";
+
+world.afterEvents.entityHurt.subscribe((event) => {
+    const entity = event.hurtEntity;
+
+    // 只处理玩家受伤的情况
+    if (entity.typeId !== "minecraft:player") {
+        return;   // 不是玩家，直接结束，不做任何处理
+    }
+
+    const currentHealth = entity.getComponent("minecraft:health").currentValue;
+    const playerName = entity.name;
+
+    // 根据血量发出不同程度的警告
+    if (currentHealth <= 2) {
+        entity.sendMessage("你的生命值极度危险，请立即处理！");
+    } else if (currentHealth <= 6) {
+        entity.sendMessage("血量不足，请注意安全。");
+    }
+
+    // 如果血量不足5点，向所有在线玩家广播警告
+    if (currentHealth < 5) {
+        world.sendMessage(`警告：玩家 ${playerName} 的血量极低！`);
+    }
+});
+```
+
+这段代码里，你能认出我们刚刚学过的 `if`、`else if`、`!==` 和比较运算符了吗？条件判断贯穿了几乎所有实际的 API 代码，它的重要性不言而喻。
+
+---
+
+## 本节知识总结
+
+| 概念 | 要点 | 示例 |
+|------|------|------|
+| 比较运算符 | 比较两个值，返回布尔值 | `hp < 10`，`name === "Steve"` |
+| `===` / `!==` | 始终优先使用严格相等 | `level === 10` |
+| `if` | 条件成立则执行 | `if (hp < 5) {...}` |
+| `if...else` | 二选一分支 | `if (...) {...} else {...}` |
+| `else if` | 多条件分支 | `else if (hp < 10) {...}` |
+| `&&` | 逻辑与，所有条件都成立 | `hp > 5 && hunger > 3` |
+| `\|\|` | 逻辑或，任一条件成立 | `hasKey \|\| isAdmin` |
+| `!` | 逻辑非，取反 | `!isRaining` |
+| `switch` | 多固定值匹配分支 | `switch(biome) { case "forest": ... }` |
+| `break` | 跳出 switch，防止贯穿 | 每个 case 末尾必写 |
+| 三元运算符 | 简洁的条件赋值 | `let s = hp > 10 ? "安全" : "危险"` |
+| Truthy / Falsy | 非布尔值在条件中的真假判断 | `if (playerName) {...}` |
+
+---
+
+## 课后练习
+
+**练习1：** 写一段代码，根据玩家当前的经验等级（`playerLevel`），判断并输出他可以使用的最高附魔等级：0-9级输出"无法附魔"，10-19级输出"最高附魔：3级"，20-29级输出"最高附魔：20级"，30级及以上输出"最高附魔：30级，可以进行最强附魔"。
+
+**练习2：** 使用三元运算符，根据当前是否是白天（`isDaytime`）和玩家是否持有火把（`hasTorch`），输出一条可见性提示。如果是白天或者持有火把，输出"视野清晰"，否则输出"视野受限，建议使用火把"。
+
+**练习3（思考题）：** 在 Minecraft Script API 里，你可能需要判断一个玩家是否是管理员，才能让他使用某个特殊指令。请思考这种场景里，你会用哪些变量、哪些条件判断来实现？不需要写出可运行的 API 代码，用我们目前学过的知识描述逻辑即可。
+
+---
+
+> **下一节预告：1.3 函数与事件处理**
+>
+> 你有没有注意到，在实际的 Script API 代码中，有很多像 `world.afterEvents.entityHurt.subscribe(...)` 这样的结构？它们的核心就是**函数**。函数是编程中最重要的概念之一，它让你可以把一段代码打包起来，在任何需要的地方调用它。在下一节中，我们将学习如何定义和使用函数，这将是迈向真正的 Script API 开发的关键一步。

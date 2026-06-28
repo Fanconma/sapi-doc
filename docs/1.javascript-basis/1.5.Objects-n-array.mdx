@@ -1,0 +1,773 @@
+---
+sidebar_position: 5
+---
+# 1.5 对象与数组
+
+## 前言：更复杂的数据，需要更好的容器
+
+在前几节中，我们用变量存储了各种数据：玩家的名字、血量、等级……但这些数据都是分散的、独立的。当我们需要描述一个完整的玩家时，就得同时管理好几个变量：
+
+```javascript
+let playerName = "Steve";
+let playerHealth = 20;
+let playerLevel = 30;
+let playerIsAdmin = false;
+```
+
+这还只是一个玩家。如果服务器里有50个玩家，难道要创建200个变量吗？
+
+现实世界里的数据往往不是孤立的，而是有结构的。一个玩家有名字、有血量、有背包；一个服务器有多个玩家、有多条规则、有多个世界。我们需要能够反映这种结构的数据容器。
+
+这就是**对象**和**数组**存在的意义。它们是 JavaScript 中最重要的两种数据结构，也是你在 Minecraft Script API 开发中打交道最多的东西。
+
+---
+
+## 1.5.1 对象：把相关数据打包在一起
+
+**对象（Object）** 可以把多个相关的数据组合成一个整体。你可以把它想象成一张**信息卡片**，卡片上有若干个字段，每个字段有自己的名称和对应的值。
+
+创建一个对象，使用花括号 `{}`：
+
+```javascript
+const player = {
+    name: "Steve",
+    health: 20,
+    level: 30,
+    isAdmin: false
+};
+```
+
+对象里的每一条数据叫做一个**属性（Property）**。属性由两部分组成：
+- **键（Key）**：属性的名称，比如 `name`、`health`
+- **值（Value）**：属性对应的数据，可以是任何类型
+
+键和值之间用冒号 `:` 分隔，不同属性之间用逗号 `,` 分隔。
+
+### 访问对象的属性
+
+访问对象的属性有两种方式：
+
+**方式一：点语法（最常用）**
+
+```javascript
+const player = {
+    name: "Steve",
+    health: 20,
+    level: 30,
+    isAdmin: false
+};
+
+console.log(player.name);     // 输出：Steve
+console.log(player.health);   // 输出：20
+console.log(player.level);    // 输出：30
+console.log(player.isAdmin);  // 输出：false
+```
+
+**方式二：方括号语法**
+
+```javascript
+console.log(player["name"]);    // 输出：Steve
+console.log(player["health"]);  // 输出：20
+```
+
+方括号语法在属性名是动态的（存在变量里）时非常有用：
+
+```javascript
+let property = "health";
+console.log(player[property]);  // 输出：20，等同于 player.health
+```
+
+### 修改对象的属性
+
+```javascript
+const player = {
+    name: "Steve",
+    health: 20,
+    level: 30
+};
+
+// 修改已有属性
+player.health = 15;
+player.level = 31;
+
+console.log(player.health);  // 输出：15
+console.log(player.level);   // 输出：31
+```
+
+:::note
+你可能注意到，这里用 `const` 声明了 `player`，但我们仍然可以修改它的属性。这是因为 `const` 只是锁定了 `player` 这个变量本身不能被重新赋值（也就是说你不能写 `player = 其他对象`），但对象内部的属性是可以修改的。
+
+这个区别初学时可能有点绕，只需记住：`const` 锁的是"盒子的标签不能换"，而不是"盒子里的东西不能动"。
+:::
+
+### 添加新属性
+
+对象创建之后，仍然可以随时添加新的属性：
+
+```javascript
+const player = {
+    name: "Steve",
+    health: 20
+};
+
+// 直接赋值就能添加新属性
+player.level = 30;
+player.currentBiome = "forest";
+
+console.log(player.level);        // 输出：30
+console.log(player.currentBiome); // 输出：forest
+```
+
+### 删除属性
+
+用 `delete` 关键字可以删除对象的某个属性：
+
+```javascript
+const player = {
+    name: "Steve",
+    health: 20,
+    temporaryBuff: "speed"
+};
+
+delete player.temporaryBuff;
+console.log(player.temporaryBuff);  // 输出：undefined（属性已不存在）
+```
+
+---
+
+## 1.5.2 对象中的方法：属于对象的函数
+
+对象的属性不只能存储数据，还可以存储**函数**。存储在对象里的函数有一个专门的名字：**方法（Method）**。
+
+```javascript
+const player = {
+    name: "Steve",
+    health: 20,
+
+    // 这是一个方法
+    greet: function() {
+        console.log(`大家好，我是 ${player.name}！`);
+    },
+
+    // 用箭头函数也可以
+    showHealth: () => {
+        console.log(`当前血量：${player.health} / 20`);
+    }
+};
+
+// 调用方法，和访问属性一样用点语法，但要加括号
+player.greet();       // 输出：大家好，我是 Steve！
+player.showHealth();  // 输出：当前血量：20 / 20
+```
+
+这个概念非常重要，因为在 Minecraft Script API 中，你操作的几乎所有东西都是对象，而操控它们的方式就是调用它们的方法。
+
+比如：
+- `player.sendMessage("你好")` — 调用玩家对象的 `sendMessage` 方法
+- `player.getComponent("minecraft:health")` — 调用玩家对象的 `getComponent` 方法
+- `world.sendMessage("公告")` — 调用世界对象的 `sendMessage` 方法
+
+你看，你其实已经在用方法了，只是现在才正式认识它。
+
+---
+
+## 1.5.3 嵌套对象：对象里面的对象
+
+对象的属性值可以是任何类型，当然也可以是另一个对象。这叫做**嵌套对象**，用来表达更复杂的数据结构：
+
+```javascript
+const player = {
+    name: "Steve",
+    health: 20,
+    position: {
+        x: 100,
+        y: 64,
+        z: -200
+    },
+    equipment: {
+        mainHand: "diamond_sword",
+        offHand: "shield",
+        helmet: "iron_helmet"
+    }
+};
+
+// 访问嵌套属性，连续使用点语法
+console.log(player.position.x);          // 输出：100
+console.log(player.position.y);          // 输出：64
+console.log(player.equipment.mainHand);  // 输出：diamond_sword
+
+// 修改嵌套属性
+player.position.x = 150;
+console.log(player.position.x);          // 输出：150
+```
+
+在 Minecraft Script API 里，你经常会看到类似这样的嵌套结构，比如坐标就是一个包含 `x`、`y`、`z` 三个属性的对象。
+
+---
+
+## 1.5.4 遍历对象的属性
+
+有时候你想查看一个对象里所有的属性，可以用 `for...in` 循环：
+
+```javascript
+const player = {
+    name: "Steve",
+    health: 20,
+    level: 30,
+    isAdmin: false
+};
+
+for (let key in player) {
+    console.log(`${key}：${player[key]}`);
+}
+```
+
+输出结果：
+
+```
+name：Steve
+health：20
+level：30
+isAdmin：false
+```
+
+`key` 每次循环会取到对象的一个属性名（字符串），然后用 `player[key]` 的方括号语法来获取对应的值。
+
+:::note
+`for...in` 主要用于调试和查看对象内容。在实际开发中，如果你明确知道需要访问哪些属性，直接用点语法访问即可，不需要用 `for...in` 遍历。
+:::
+
+---
+
+## 1.5.5 数组：有序的数据列表
+
+**数组（Array）** 是用来存储一组有序数据的容器。和对象不同，数组里的每个元素没有名称，而是用**位置编号（下标/索引）** 来标识。
+
+创建一个数组，使用方括号 `[]`：
+
+```javascript
+const playerNames = ["Steve", "Alex", "Herobrine", "Notch"];
+```
+
+数组里的每个数据叫做**元素（Element）**，元素之间用逗号分隔。
+
+### 访问数组元素
+
+数组的下标从 **0** 开始，不是从 1 开始。第一个元素的下标是 0，第二个是 1，以此类推：
+
+```javascript
+const playerNames = ["Steve", "Alex", "Herobrine", "Notch"];
+//                      0        1         2           3
+
+console.log(playerNames[0]);  // 输出：Steve
+console.log(playerNames[1]);  // 输出：Alex
+console.log(playerNames[2]);  // 输出：Herobrine
+console.log(playerNames[3]);  // 输出：Notch
+```
+
+:::warning
+下标从 0 开始是初学者最容易犯错的地方。"第一个元素"的下标是 `0`，"第二个元素"的下标是 `1`。
+
+如果你尝试访问一个不存在的下标，不会报错，但会返回 `undefined`：
+
+```javascript
+console.log(playerNames[10]);  // 输出：undefined
+```
+
+这种错误很隐蔽，不会让程序崩溃，但会让后续的逻辑出错，要格外留意。
+:::
+
+### 数组的长度
+
+用 `.length` 属性可以获取数组里元素的个数：
+
+```javascript
+const playerNames = ["Steve", "Alex", "Herobrine", "Notch"];
+console.log(playerNames.length);  // 输出：4
+```
+
+因此，数组最后一个元素的下标始终是 `length - 1`：
+
+```javascript
+const lastPlayer = playerNames[playerNames.length - 1];
+console.log(lastPlayer);  // 输出：Notch
+```
+
+### 修改数组元素
+
+直接通过下标赋值来修改：
+
+```javascript
+const playerNames = ["Steve", "Alex", "Herobrine"];
+playerNames[1] = "Jeb";
+console.log(playerNames);  // 输出：["Steve", "Jeb", "Herobrine"]
+```
+
+---
+
+## 1.5.6 数组的常用操作方法
+
+数组自带了很多实用的方法，用来添加、删除、查找元素。
+
+### 添加和删除元素
+
+```javascript
+const inventory = ["木头", "石头", "铁锭"];
+
+// push：在末尾添加元素
+inventory.push("钻石");
+console.log(inventory);  // ["木头", "石头", "铁锭", "钻石"]
+
+// pop：移除并返回末尾的元素
+let removed = inventory.pop();
+console.log(removed);    // 输出：钻石
+console.log(inventory);  // ["木头", "石头", "铁锭"]
+
+// unshift：在开头添加元素
+inventory.unshift("木棍");
+console.log(inventory);  // ["木棍", "木头", "石头", "铁锭"]
+
+// shift：移除并返回开头的元素
+let first = inventory.shift();
+console.log(first);      // 输出：木棍
+console.log(inventory);  // ["木头", "石头", "铁锭"]
+```
+
+### 查找元素
+
+```javascript
+const bannedPlayers = ["Griefer99", "Troll123", "Hacker456"];
+
+// indexOf：查找元素的下标，找不到返回 -1
+console.log(bannedPlayers.indexOf("Troll123"));   // 输出：1
+console.log(bannedPlayers.indexOf("Steve"));      // 输出：-1
+
+// includes：判断元素是否存在，返回布尔值
+console.log(bannedPlayers.includes("Griefer99")); // 输出：true
+console.log(bannedPlayers.includes("Alex"));      // 输出：false
+```
+
+`includes` 在实际开发中非常实用，比如检查某个玩家是否在黑名单里：
+
+```javascript
+const bannedPlayers = ["Griefer99", "Troll123"];
+const playerName = "Griefer99";
+
+if (bannedPlayers.includes(playerName)) {
+    console.log(`${playerName} 在黑名单中，禁止进入。`);
+} else {
+    console.log(`${playerName} 欢迎加入服务器。`);
+}
+// 输出：Griefer99 在黑名单中，禁止进入。
+```
+
+### 截取和拼接
+
+```javascript
+const items = ["木头", "石头", "铁锭", "金锭", "钻石"];
+
+// slice：截取数组的一部分，返回新数组，不修改原数组
+// slice(开始下标, 结束下标)，不包含结束下标的元素
+let rareItems = items.slice(2, 5);
+console.log(rareItems);  // ["铁锭", "金锭", "钻石"]
+console.log(items);      // 原数组不变
+
+// splice：从指定位置删除或插入元素，会修改原数组
+// splice(开始下标, 删除数量, 插入的元素...)
+items.splice(1, 2);      // 从下标1开始，删除2个元素
+console.log(items);      // ["木头", "金锭", "钻石"]
+
+// concat：拼接两个数组，返回新数组
+let moreItems = ["末影珍珠", "烈焰棒"];
+let allItems = items.concat(moreItems);
+console.log(allItems);   // ["木头", "金锭", "钻石", "末影珍珠", "烈焰棒"]
+```
+
+:::tip
+区分会不会修改原数组是选用数组方法时的重要考量：
+
+- **会修改原数组**：`push`、`pop`、`shift`、`unshift`、`splice`
+- **不会修改原数组，返回新数组**：`slice`、`concat`
+
+在 Script API 开发中，有时候你需要保留原始数据，这时应该优先选择不修改原数组的方法。
+:::
+
+---
+
+## 1.5.7 对象数组：最常见的数据结构
+
+在实际开发中，你最常用到的数据结构是**对象数组**，也就是数组里的每个元素都是一个对象。这是表达"一批具有相同结构的数据"的标准方式。
+
+```javascript
+const players = [
+    { name: "Steve",     health: 20, level: 30, isAdmin: false },
+    { name: "Alex",      health: 14, level: 22, isAdmin: false },
+    { name: "Herobrine", health: 20, level: 50, isAdmin: true  },
+    { name: "Notch",     health: 18, level: 45, isAdmin: true  },
+];
+```
+
+访问对象数组里的数据，把下标访问和点语法结合起来用：
+
+```javascript
+console.log(players[0].name);    // 输出：Steve
+console.log(players[1].health);  // 输出：14
+console.log(players[2].isAdmin); // 输出：true
+```
+
+配合循环来处理每个玩家：
+
+```javascript
+for (let player of players) {
+    if (player.isAdmin) {
+        console.log(`${player.name} 是管理员，等级 ${player.level}。`);
+    } else {
+        console.log(`${player.name} 是普通玩家，血量 ${player.health} / 20。`);
+    }
+}
+```
+
+输出结果：
+
+```
+Steve 是普通玩家，血量 20 / 20。
+Alex 是普通玩家，血量 14 / 20。
+Herobrine 是管理员，等级 50。
+Notch 是管理员，等级 45。
+```
+
+这种"对象数组 + 循环遍历"的组合，是 Minecraft Script API 中处理玩家列表、实体列表时最核心的模式，后续你将无数次用到它。
+
+---
+
+## 1.5.8 解构赋值：更优雅地取出数据
+
+当你需要从对象或数组中取出多个值时，可以用**解构赋值**语法，一次性把多个属性提取出来，分别存进变量：
+
+### 对象解构
+
+```javascript
+const player = {
+    name: "Steve",
+    health: 20,
+    level: 30,
+    isAdmin: false
+};
+
+// 传统写法
+let name = player.name;
+let health = player.health;
+let level = player.level;
+
+// 解构写法，一行搞定
+let { name, health, level } = player;
+
+console.log(name);    // 输出：Steve
+console.log(health);  // 输出：20
+console.log(level);   // 输出：30
+```
+
+还可以在解构时给变量起别名，避免命名冲突：
+
+```javascript
+let { name: playerName, health: playerHealth } = player;
+console.log(playerName);   // 输出：Steve
+console.log(playerHealth); // 输出：20
+```
+
+### 数组解构
+
+```javascript
+const coordinates = [100, 64, -200];
+
+// 传统写法
+let x = coordinates[0];
+let y = coordinates[1];
+let z = coordinates[2];
+
+// 解构写法
+let [x, y, z] = coordinates;
+
+console.log(x);  // 输出：100
+console.log(y);  // 输出：64
+console.log(z);  // 输出：-200
+```
+
+### 在函数参数中使用解构
+
+解构赋值在函数参数上也很好用，让代码意图更清晰：
+
+```javascript
+// 不使用解构
+function showPlayerInfo(player) {
+    console.log(`${player.name} 的血量：${player.health}`);
+}
+
+// 使用解构，直接在参数里声明需要哪些属性
+function showPlayerInfo({ name, health }) {
+    console.log(`${name} 的血量：${health}`);
+}
+
+const player = { name: "Steve", health: 20, level: 30 };
+showPlayerInfo(player);  // 输出：Steve 的血量：20
+```
+
+在 Minecraft Script API 的事件处理中，你会经常看到这种参数解构的写法：
+
+```javascript
+// 不使用解构
+world.afterEvents.playerSpawn.subscribe((event) => {
+    const player = event.player;
+    console.log(player.name);
+});
+
+// 使用解构，直接从 event 中取出 player
+world.afterEvents.playerSpawn.subscribe(({ player }) => {
+    console.log(player.name);
+});
+```
+
+---
+
+## 1.5.9 展开运算符：灵活地复制和合并
+
+**展开运算符（Spread Operator）** 写作 `...`，可以把数组或对象"展开"成单独的元素。
+
+### 展开数组
+
+```javascript
+const swords = ["木剑", "石剑", "铁剑"];
+const axes = ["木斧", "石斧", "铁斧"];
+
+// 合并两个数组
+const weapons = [...swords, ...axes];
+console.log(weapons);
+// ["木剑", "石剑", "铁剑", "木斧", "石斧", "铁斧"]
+
+// 复制数组（不是引用，是真正的复制）
+const swordsCopy = [...swords];
+swordsCopy.push("钻石剑");
+console.log(swords);      // ["木剑", "石剑", "铁剑"]（原数组未变）
+console.log(swordsCopy);  // ["木剑", "石剑", "铁剑", "钻石剑"]
+```
+
+### 展开对象
+
+```javascript
+const basePlayer = {
+    health: 20,
+    level: 1,
+    isAdmin: false
+};
+
+// 基于已有对象创建新对象，并覆盖某些属性
+const adminPlayer = {
+    ...basePlayer,      // 复制 basePlayer 的所有属性
+    name: "Notch",      // 添加新属性
+    isAdmin: true       // 覆盖 isAdmin
+};
+
+console.log(adminPlayer);
+// { health: 20, level: 1, isAdmin: true, name: "Notch" }
+console.log(basePlayer.isAdmin);  // 输出：false（原对象未变）
+```
+
+:::tip
+展开运算符复制对象或数组时，是"浅拷贝"。对于只包含数字、字符串、布尔值这类简单数据的对象，浅拷贝已经够用。但如果对象内部还嵌套了其他对象，嵌套部分不会被真正复制，而是共享同一份引用。这是一个相对进阶的话题，现阶段了解即可，遇到问题时再深入研究。
+:::
+
+---
+
+## 1.5.10 实战练习：服务器玩家管理系统
+
+综合这一节学到的所有知识，来搭建一个玩家管理系统：
+
+```javascript
+// === 玩家数据库 ===
+const playerDatabase = [
+    {
+        name: "Steve",
+        health: 20,
+        level: 30,
+        isAdmin: false,
+        position: { x: 0, y: 64, z: 0 },
+        inventory: ["钻石剑", "钻石镐", "面包"]
+    },
+    {
+        name: "Alex",
+        health: 8,
+        level: 15,
+        isAdmin: false,
+        position: { x: 120, y: 70, z: -50 },
+        inventory: ["铁剑", "弓", "箭"]
+    },
+    {
+        name: "Notch",
+        health: 20,
+        level: 99,
+        isAdmin: true,
+        position: { x: -300, y: 64, z: 200 },
+        inventory: ["命令方块"]
+    }
+];
+
+// === 工具函数 ===
+
+// 根据名字查找玩家，返回玩家对象，找不到返回 null
+function findPlayer(name) {
+    for (let player of playerDatabase) {
+        if (player.name === name) {
+            return player;
+        }
+    }
+    return null;
+}
+
+// 格式化输出玩家的完整信息
+function printPlayerInfo(player) {
+    const { name, health, level, isAdmin, position, inventory } = player;
+
+    console.log(`\n===== ${name} 的信息 =====`);
+    console.log(`等级：${level}`);
+    console.log(`血量：${health} / 20`);
+    console.log(`权限：${isAdmin ? "管理员" : "普通玩家"}`);
+    console.log(`坐标：X=${position.x}, Y=${position.y}, Z=${position.z}`);
+    console.log(`背包：${inventory.join(", ")}`);
+}
+
+// 检查并输出低血量玩家
+function checkLowHealthPlayers(threshold) {
+    console.log(`\n--- 血量低于 ${threshold} 的玩家 ---`);
+    let found = false;
+
+    for (let player of playerDatabase) {
+        if (player.health < threshold) {
+            console.log(`${player.name}：当前血量 ${player.health} / 20`);
+            found = true;
+        }
+    }
+
+    if (!found) {
+        console.log("所有玩家状态良好。");
+    }
+}
+
+// === 开始使用 ===
+
+// 查找并展示特定玩家信息
+const target = findPlayer("Alex");
+if (target) {
+    printPlayerInfo(target);
+} else {
+    console.log("未找到该玩家。");
+}
+
+// 检查所有低血量玩家
+checkLowHealthPlayers(15);
+
+// 给 Steve 的背包添加一个物品
+const steve = findPlayer("Steve");
+if (steve) {
+    steve.inventory.push("末影珍珠");
+    console.log(`\n给 Steve 添加物品后，背包：${steve.inventory.join(", ")}`);
+}
+```
+
+输出结果：
+
+```
+===== Alex 的信息 =====
+等级：15
+血量：8 / 20
+权限：普通玩家
+坐标：X=120, Y=70, Z=-50
+背包：铁剑, 弓, 箭
+
+--- 血量低于 15 的玩家 ---
+Alex：当前血量 8 / 20
+
+给 Steve 添加物品后，背包：钻石剑, 钻石镐, 面包, 末影珍珠
+```
+
+---
+
+## 1.5.11 Minecraft Script API 中的实际应用预览
+
+在 Script API 中，玩家、实体、方块等等，全都是对象。你通过访问它们的属性和调用它们的方法来完成操作：
+
+```javascript
+import { world } from "@minecraft/server";
+
+world.afterEvents.playerSpawn.subscribe(({ player }) => {
+    // player 就是一个对象，有各种属性和方法
+
+    // 访问属性
+    const name = player.name;
+    const location = player.location;  // 这是一个嵌套对象，包含 x, y, z
+
+    // 解构嵌套对象
+    const { x, y, z } = player.location;
+
+    // 调用方法
+    player.sendMessage(`欢迎，${name}！`);
+    player.sendMessage(`你的当前坐标：X=${Math.floor(x)}, Y=${Math.floor(y)}, Z=${Math.floor(z)}`);
+
+    // 获取世界中所有玩家（返回一个数组）
+    const allPlayers = world.getPlayers();
+
+    // 遍历玩家数组，向每个人广播
+    for (let onlinePlayer of allPlayers) {
+        onlinePlayer.sendMessage(`${name} 加入了游戏，当前在线 ${allPlayers.length} 人。`);
+    }
+});
+```
+
+你看，对象、数组、解构、`for...of` 循环，全都出现在了这段真实的 API 代码里。到这里，你已经具备了阅读和理解大多数 Script API 基础代码的能力。
+
+---
+
+## 本节知识总结
+
+| 概念 | 要点 | 示例 |
+|------|------|------|
+| 对象 | 用键值对存储相关数据 | `{ name: "Steve", health: 20 }` |
+| 点语法 | 访问对象属性 | `player.name` |
+| 方括号语法 | 用变量访问对象属性 | `player["name"]` |
+| 方法 | 存储在对象里的函数 | `player.sendMessage("Hi")` |
+| 嵌套对象 | 对象的属性值也是对象 | `player.position.x` |
+| `for...in` | 遍历对象的所有属性 | `for (let key in obj) {...}` |
+| 数组 | 有序的数据集合 | `["Steve", "Alex"]` |
+| 下标 | 从 0 开始的位置编号 | `arr[0]` 是第一个元素 |
+| `.length` | 获取数组元素个数 | `arr.length` |
+| `push` / `pop` | 在末尾添加/删除元素 | `arr.push("钻石")` |
+| `includes` | 判断元素是否存在 | `arr.includes("钻石")` |
+| `indexOf` | 查找元素的下标 | `arr.indexOf("钻石")` |
+| `slice` | 截取数组，不改变原数组 | `arr.slice(1, 3)` |
+| 对象数组 | 元素为对象的数组 | `[{ name: "Steve" }, ...]` |
+| 解构赋值 | 快速提取对象或数组中的值 | `let { name, health } = player` |
+| 展开运算符 | 展开数组或对象 | `[...arr1, ...arr2]` |
+
+---
+
+## 课后练习
+
+**练习1：** 创建一个对象来描述一个 Minecraft 村庄，包含：村庄名称、所在生物群系、村民数量、是否有铁傀儡守护、以及一个包含至少3种建筑名称的数组。然后用 `console.log` 输出一段完整的描述文字。
+
+**练习2：** 有如下玩家数组：
+```javascript
+const players = [
+    { name: "Alice", score: 1500, isOnline: true  },
+    { name: "Bob",   score: 800,  isOnline: false },
+    { name: "Carol", score: 2200, isOnline: true  },
+    { name: "Dave",  score: 950,  isOnline: true  },
+];
+```
+用 `for...of` 循环遍历这个数组，只对在线玩家（`isOnline` 为 `true`）输出信息，格式为 `"[在线] Alice - 积分：1500"`。
+
+**练习3（思考题）：** 回顾本节中的 `findPlayer` 函数。它在找不到玩家时返回 `null`。思考一下：调用这个函数之后，为什么在使用返回值之前要先检查它是否为 `null`？如果不检查直接使用，会发生什么？
+
+---
+
+> **下一节预告：1.6 数组方法与集合操作**
+>
+> 这一节我们学了数组的基础操作，但数组真正强大的地方还没有展示出来。JavaScript 为数组提供了一套非常强大的高阶方法：`map`、`filter`、`find`、`reduce`……它们可以让你用极少的代码完成复杂的数据处理，在 Script API 开发中处理玩家列表、实体列表时会大量用到。下一节我们将专门深入学习这些方法。

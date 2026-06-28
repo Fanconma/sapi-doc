@@ -1,0 +1,744 @@
+---
+sidebar_position: 6
+---
+# 1.6 数组方法与集合操作
+
+## 前言：数组的真正实力
+
+在上一节中，我们学习了数组的基础操作：创建、访问、添加、删除元素。但数组真正强大的地方，是它内置的一套专门用于**处理和转换数据**的方法。
+
+回想一下现实中处理数据的场景：
+
+- 从所有在线玩家中，找出血量低于5的玩家
+- 把玩家列表中每个人的名字都转换成大写
+- 计算所有玩家的平均等级
+- 过滤掉被封禁的玩家，只保留正常玩家
+
+用上一节学的循环，这些都可以实现，但会比较繁琐。本节介绍的数组方法，可以让你用更少、更清晰的代码完成这些任务。
+
+这些方法在 Minecraft Script API 的实际开发中出现频率极高，是你必须熟练掌握的工具。
+
+---
+
+## 1.6.1 forEach：遍历每个元素
+
+`forEach` 是最基础的数组遍历方法，它对数组里的每个元素执行一次你提供的函数：
+
+```javascript
+数组.forEach((元素) => {
+    // 对每个元素执行的操作
+});
+```
+
+用它来替代 `for...of` 循环：
+
+```javascript
+const playerNames = ["Steve", "Alex", "Herobrine", "Notch"];
+
+// 用 for...of 遍历
+for (let name of playerNames) {
+    console.log(`玩家：${name}`);
+}
+
+// 用 forEach 遍历，效果完全相同
+playerNames.forEach((name) => {
+    console.log(`玩家：${name}`);
+});
+```
+
+`forEach` 还可以获取当前元素的下标，作为回调函数的第二个参数：
+
+```javascript
+const players = ["Steve", "Alex", "Herobrine"];
+
+players.forEach((name, index) => {
+    console.log(`第 ${index + 1} 位玩家：${name}`);
+});
+```
+
+输出结果：
+
+```
+第 1 位玩家：Steve
+第 2 位玩家：Alex
+第 3 位玩家：Herobrine
+```
+
+:::note
+`forEach` 和 `for...of` 在大多数场景下可以互换使用。选择哪个主要看个人习惯和代码风格。
+
+但有一个重要区别：`for...of` 支持 `break` 和 `continue` 来控制循环流程，而 `forEach` 不支持。如果你在遍历过程中需要提前退出，用 `for...of`。如果只是单纯地对每个元素做同样的操作，`forEach` 更简洁。
+:::
+
+---
+
+## 1.6.2 filter：筛选出符合条件的元素
+
+`filter` 从数组中筛选出满足条件的元素，**返回一个包含所有满足条件的元素的新数组**，原数组不变。
+
+```javascript
+const 新数组 = 原数组.filter((元素) => {
+    return 条件;   // 返回 true 则保留该元素，返回 false 则过滤掉
+});
+```
+
+来看一个实际例子——找出所有血量偏低的玩家：
+
+```javascript
+const players = [
+    { name: "Steve",     health: 20 },
+    { name: "Alex",      health: 6  },
+    { name: "Herobrine", health: 20 },
+    { name: "Notch",     health: 3  },
+    { name: "Jeb",       health: 14 },
+];
+
+const lowHealthPlayers = players.filter((player) => {
+    return player.health < 10;
+});
+
+console.log(lowHealthPlayers);
+// [{ name: "Alex", health: 6 }, { name: "Notch", health: 3 }]
+```
+
+`filter` 会把每个元素都传进你的函数，如果函数返回 `true`，这个元素就会被放进新数组；如果返回 `false`，就跳过。
+
+配合解构赋值和箭头函数的简化写法，代码可以更紧凑：
+
+```javascript
+// 完整写法
+const lowHealthPlayers = players.filter((player) => {
+    return player.health < 10;
+});
+
+// 简化写法（单行箭头函数可以省略 return 和大括号）
+const lowHealthPlayers = players.filter(player => player.health < 10);
+```
+
+更多应用示例：
+
+```javascript
+const players = [
+    { name: "Steve",     isAdmin: false, isBanned: false },
+    { name: "Alex",      isAdmin: false, isBanned: true  },
+    { name: "Herobrine", isAdmin: true,  isBanned: false },
+    { name: "Notch",     isAdmin: true,  isBanned: false },
+    { name: "Griefer99", isAdmin: false, isBanned: true  },
+];
+
+// 过滤出所有管理员
+const admins = players.filter(player => player.isAdmin);
+console.log(admins.map(p => p.name));  // ["Herobrine", "Notch"]
+
+// 过滤出所有未被封禁的普通玩家
+const normalPlayers = players.filter(p => !p.isAdmin && !p.isBanned);
+console.log(normalPlayers.map(p => p.name));  // ["Steve"]
+
+// 过滤出名字长度超过4个字符的玩家
+const longNamePlayers = players.filter(p => p.name.length > 4);
+console.log(longNamePlayers.map(p => p.name));  // ["Steve", "Herobrine", "Griefer99", "Notch"]
+```
+
+---
+
+## 1.6.3 map：把数组转换成另一个数组
+
+`map` 对数组的每个元素执行一次变换操作，**把变换结果收集起来，返回一个等长的新数组**，原数组不变。
+
+```javascript
+const 新数组 = 原数组.map((元素) => {
+    return 变换后的值;
+});
+```
+
+把这个想象成一条流水线：原材料（原数组）进去，每个元素经过加工（你的函数），变成新产品（新数组）出来。
+
+基础示例：
+
+```javascript
+const numbers = [1, 2, 3, 4, 5];
+
+// 把每个数字乘以2
+const doubled = numbers.map(n => n * 2);
+console.log(doubled);   // [2, 4, 6, 8, 10]
+console.log(numbers);   // [1, 2, 3, 4, 5]（原数组未变）
+```
+
+在 Minecraft 场景中的应用：
+
+```javascript
+const players = [
+    { name: "Steve",     health: 20, level: 30 },
+    { name: "Alex",      health: 14, level: 22 },
+    { name: "Herobrine", health: 20, level: 50 },
+];
+
+// 从玩家对象数组中提取所有玩家名字，得到一个字符串数组
+const playerNames = players.map(player => player.name);
+console.log(playerNames);  // ["Steve", "Alex", "Herobrine"]
+
+// 给每个玩家生成一段状态描述
+const statusMessages = players.map(player => {
+    return `${player.name}（等级 ${player.level}）- 血量 ${player.health}/20`;
+});
+
+statusMessages.forEach(msg => console.log(msg));
+```
+
+输出结果：
+
+```
+Steve（等级 30）- 血量 20/20
+Alex（等级 22）- 血量 14/20
+Herobrine（等级 50）- 血量 20/20
+```
+
+`map` 也常用于对象数组的结构转换，比如把完整的玩家对象转换成只包含部分信息的精简对象：
+
+```javascript
+const players = [
+    { name: "Steve", health: 20, level: 30, isAdmin: false, isBanned: false },
+    { name: "Alex",  health: 14, level: 22, isAdmin: false, isBanned: true  },
+];
+
+// 只保留需要的字段
+const playerSummaries = players.map(({ name, level, isBanned }) => ({
+    name,
+    level,
+    status: isBanned ? "封禁" : "正常"
+}));
+
+console.log(playerSummaries);
+// [
+//   { name: "Steve", level: 30, status: "正常" },
+//   { name: "Alex",  level: 22, status: "封禁" }
+// ]
+```
+
+:::note
+`map` 返回的新数组长度永远和原数组相同，因为它是对每个元素做变换，不会增加或减少元素数量。如果你想过滤掉某些元素，应该用 `filter`，或者把 `filter` 和 `map` 组合使用。
+:::
+
+---
+
+## 1.6.4 find 与 findIndex：查找特定元素
+
+`find` 在数组中查找**第一个**满足条件的元素，找到就返回该元素，找不到返回 `undefined`：
+
+```javascript
+const 结果 = 数组.find((元素) => {
+    return 条件;
+});
+```
+
+```javascript
+const players = [
+    { name: "Steve",     level: 30 },
+    { name: "Alex",      level: 22 },
+    { name: "Herobrine", level: 50 },
+];
+
+// 查找名为 "Alex" 的玩家
+const alex = players.find(player => player.name === "Alex");
+console.log(alex);  // { name: "Alex", level: 22 }
+
+// 查找等级超过40的玩家（只返回第一个）
+const highLevel = players.find(player => player.level > 40);
+console.log(highLevel);  // { name: "Herobrine", level: 50 }
+
+// 查找不存在的玩家
+const ghost = players.find(player => player.name === "Ghost");
+console.log(ghost);  // undefined
+```
+
+和上一节我们手写的 `findPlayer` 函数相比，`find` 让代码简洁了很多：
+
+```javascript
+// 之前手写的版本（8行）
+function findPlayer(name) {
+    for (let player of playerDatabase) {
+        if (player.name === name) {
+            return player;
+        }
+    }
+    return null;
+}
+
+// 用 find 实现（1行）
+const findPlayer = (name) => players.find(p => p.name === name);
+```
+
+`findIndex` 和 `find` 类似，但返回的是满足条件的元素的**下标**，找不到返回 `-1`：
+
+```javascript
+const players = ["Steve", "Alex", "Herobrine", "Notch"];
+
+const index = players.findIndex(name => name === "Herobrine");
+console.log(index);  // 输出：2
+
+const notFound = players.findIndex(name => name === "Ghost");
+console.log(notFound);  // 输出：-1
+```
+
+`findIndex` 在需要修改或删除某个特定元素时非常有用：
+
+```javascript
+const players = [
+    { name: "Steve", isBanned: false },
+    { name: "Alex",  isBanned: false },
+    { name: "Griefer99", isBanned: false },
+];
+
+// 找到 Griefer99 的下标并封禁他
+const targetIndex = players.findIndex(p => p.name === "Griefer99");
+
+if (targetIndex !== -1) {
+    players[targetIndex].isBanned = true;
+    console.log(`${players[targetIndex].name} 已被封禁。`);
+}
+```
+
+---
+
+## 1.6.5 some 与 every：整体判断
+
+这两个方法用于对数组进行整体性的条件判断，都返回布尔值。
+
+### some：只要有一个满足条件就返回 true
+
+```javascript
+const players = [
+    { name: "Steve", health: 20 },
+    { name: "Alex",  health: 3  },
+    { name: "Notch", health: 18 },
+];
+
+// 是否有任何玩家处于危险状态（血量 < 5）？
+const anyoneInDanger = players.some(player => player.health < 5);
+console.log(anyoneInDanger);  // 输出：true（Alex 血量是 3）
+
+// 是否有管理员在线？
+const hasAdmin = players.some(player => player.isAdmin);
+console.log(hasAdmin);  // 输出：false
+```
+
+### every：所有元素都满足条件才返回 true
+
+```javascript
+const players = [
+    { name: "Steve", health: 20 },
+    { name: "Alex",  health: 18 },
+    { name: "Notch", health: 20 },
+];
+
+// 是否所有玩家都满血？
+const allFullHealth = players.every(player => player.health === 20);
+console.log(allFullHealth);  // 输出：false（Alex 不是满血）
+
+// 是否所有玩家血量都超过10？
+const allHealthy = players.every(player => player.health > 10);
+console.log(allHealthy);  // 输出：true
+```
+
+`some` 和 `every` 在 Script API 中常用于在执行操作前做整体检查：
+
+```javascript
+import { world } from "@minecraft/server";
+
+function startTeamBattle() {
+    const players = world.getPlayers();
+
+    // 人数检查
+    if (players.length < 2) {
+        world.sendMessage("人数不足，无法开始团队战斗。");
+        return;
+    }
+
+    // 确保所有玩家血量充足才开始
+    const allReady = players.every(player => {
+        const health = player.getComponent("minecraft:health").currentValue;
+        return health >= 10;
+    });
+
+    if (!allReady) {
+        world.sendMessage("有玩家血量不足，请补充血量后再开始。");
+        return;
+    }
+
+    world.sendMessage("所有玩家准备就绪，团队战斗开始！");
+}
+```
+
+---
+
+## 1.6.6 reduce：把数组"归纳"成单个值
+
+`reduce` 是数组方法中最灵活、也最难理解的一个。它把数组中的所有元素"归纳"成一个最终结果，这个结果可以是数字、字符串、对象，或者任何类型。
+
+```javascript
+const 结果 = 数组.reduce((累计值, 当前元素) => {
+    return 新的累计值;
+}, 初始值);
+```
+
+先用最简单的例子来理解它的工作原理——求数组所有数字的总和：
+
+```javascript
+const scores = [100, 85, 92, 78, 95];
+
+const total = scores.reduce((sum, score) => {
+    return sum + score;
+}, 0);
+
+console.log(total);  // 输出：450
+```
+
+`reduce` 的执行过程是这样的：
+
+| 第几次 | 累计值（sum） | 当前元素（score） | 返回的新累计值 |
+|--------|--------------|-------------------|----------------|
+| 第1次  | 0（初始值）   | 100               | 0 + 100 = 100  |
+| 第2次  | 100           | 85                | 100 + 85 = 185 |
+| 第3次  | 185           | 92                | 185 + 92 = 277 |
+| 第4次  | 277           | 78                | 277 + 78 = 355 |
+| 第5次  | 355           | 95                | 355 + 95 = 450 |
+
+最终返回 450。
+
+在 Minecraft 场景中的实际应用：
+
+```javascript
+const players = [
+    { name: "Steve",     level: 30, kills: 120 },
+    { name: "Alex",      level: 22, kills: 85  },
+    { name: "Herobrine", level: 50, kills: 300 },
+    { name: "Notch",     level: 45, kills: 210 },
+];
+
+// 计算所有玩家的总击杀数
+const totalKills = players.reduce((sum, player) => sum + player.kills, 0);
+console.log(`全服总击杀数：${totalKills}`);  // 输出：全服总击杀数：715
+
+// 计算平均等级
+const avgLevel = players.reduce((sum, player) => sum + player.level, 0) / players.length;
+console.log(`玩家平均等级：${avgLevel}`);    // 输出：玩家平均等级：36.75
+
+// 找出击杀数最高的玩家（用 reduce 实现"求最大值"）
+const topKiller = players.reduce((best, player) => {
+    return player.kills > best.kills ? player : best;
+});
+console.log(`击杀数最高的玩家：${topKiller.name}（${topKiller.kills} 次）`);
+// 输出：击杀数最高的玩家：Herobrine（300 次）
+```
+
+:::note
+`reduce` 功能强大，但如果使用不当，会让代码变得难以阅读。
+
+一个实用的判断原则：如果你的需求是求和、求最大值、统计数量这类"把数组归纳成单个值"的操作，`reduce` 是合适的选择。如果你发现自己用 `reduce` 来做 `filter` 或 `map` 能做到的事，那就直接用 `filter` 或 `map`，代码会更清晰。
+:::
+
+---
+
+## 1.6.7 sort：排序
+
+`sort` 对数组元素进行排序，**直接修改原数组**并返回排序后的数组。
+
+:::warning
+`sort` 在不传入任何参数时，会把所有元素转换成字符串再排序。这对字符串数组没问题，但对数字数组会产生错误结果：
+
+```javascript
+const numbers = [10, 9, 2, 100, 21];
+numbers.sort();
+console.log(numbers);  // [10, 100, 2, 21, 9] ← 这是错的！
+```
+
+结果不对，因为它是在按字符串顺序排，"100" 排在 "2" 前面因为 "1" < "2"。
+
+**对数字数组排序，必须传入一个比较函数：**
+
+```javascript
+// 升序排列
+numbers.sort((a, b) => a - b);
+console.log(numbers);  // [2, 9, 10, 21, 100] ← 正确
+
+// 降序排列
+numbers.sort((a, b) => b - a);
+console.log(numbers);  // [100, 21, 10, 9, 2] ← 正确
+```
+:::
+
+比较函数的规则：
+- 返回**负数**：`a` 排在 `b` 前面
+- 返回**正数**：`b` 排在 `a` 前面
+- 返回 **0**：顺序不变
+
+对对象数组排序：
+
+```javascript
+const players = [
+    { name: "Steve",     level: 30, kills: 120 },
+    { name: "Alex",      level: 22, kills: 85  },
+    { name: "Herobrine", level: 50, kills: 300 },
+    { name: "Notch",     level: 45, kills: 210 },
+];
+
+// 按等级从高到低排序
+players.sort((a, b) => b.level - a.level);
+players.forEach(p => console.log(`${p.name}：等级 ${p.level}`));
+```
+
+输出结果：
+
+```
+Herobrine：等级 50
+Notch：等级 45
+Steve：等级 30
+Alex：等级 22
+```
+
+按字符串属性排序，使用 `localeCompare`：
+
+```javascript
+// 按名字字母顺序排序
+players.sort((a, b) => a.name.localeCompare(b.name));
+players.forEach(p => console.log(p.name));
+// Alex, Herobrine, Notch, Steve
+```
+
+因为 `sort` 会直接修改原数组，如果你需要保留原来的顺序，先用展开运算符复制一份再排序：
+
+```javascript
+const sortedPlayers = [...players].sort((a, b) => b.level - a.level);
+// 原 players 数组顺序不变，sortedPlayers 是排序后的新数组
+```
+
+---
+
+## 1.6.8 方法链：把多个方法串联起来
+
+数组方法最强大的用法之一，是把多个方法**链式调用**。因为 `filter`、`map` 等方法都返回新数组，可以直接在返回的新数组上继续调用下一个方法，不需要存中间变量。
+
+```javascript
+const players = [
+    { name: "Steve",     health: 20, level: 30, isBanned: false },
+    { name: "Alex",      health: 6,  level: 22, isBanned: false },
+    { name: "Griefer99", health: 20, level: 5,  isBanned: true  },
+    { name: "Herobrine", health: 3,  level: 50, isBanned: false },
+    { name: "Notch",     health: 20, level: 45, isBanned: false },
+];
+
+// 需求：找出所有未被封禁、血量不足10的玩家的名字，按等级从高到低排列
+
+// 不用方法链（需要多个中间变量）
+const notBanned = players.filter(p => !p.isBanned);
+const lowHealth = notBanned.filter(p => p.health < 10);
+const sorted = lowHealth.sort((a, b) => b.level - a.level);
+const names = sorted.map(p => p.name);
+console.log(names);
+
+// 用方法链（一气呵成）
+const result = players
+    .filter(p => !p.isBanned)
+    .filter(p => p.health < 10)
+    .sort((a, b) => b.level - a.level)
+    .map(p => p.name);
+
+console.log(result);  // ["Herobrine", "Alex"]
+```
+
+两种写法的结果完全相同，但方法链的写法更流畅，每一步的意图也很清晰：先过滤封禁玩家，再过滤低血量玩家，再排序，最后提取名字。
+
+更多链式调用的例子：
+
+```javascript
+// 统计所有在线的非管理员玩家的总等级
+const totalLevel = players
+    .filter(p => !p.isBanned && !p.isAdmin)
+    .reduce((sum, p) => sum + p.level, 0);
+
+// 获取等级前3名玩家的名字
+const top3 = [...players]
+    .sort((a, b) => b.level - a.level)
+    .slice(0, 3)
+    .map(p => p.name);
+
+console.log(top3);  // ["Herobrine", "Notch", "Steve"]
+```
+
+---
+
+## 1.6.9 实战练习：服务器排行榜与数据统计系统
+
+把这一节所有的数组方法综合运用，建立一个服务器数据统计系统：
+
+```javascript
+// === 服务器玩家数据 ===
+const serverPlayers = [
+    { name: "Steve",     level: 30, kills: 120, deaths: 15, isBanned: false, isOnline: true  },
+    { name: "Alex",      level: 22, kills: 85,  deaths: 20, isBanned: false, isOnline: true  },
+    { name: "Herobrine", level: 50, kills: 300, deaths: 5,  isBanned: false, isOnline: false },
+    { name: "Notch",     level: 45, kills: 210, deaths: 8,  isBanned: false, isOnline: true  },
+    { name: "Griefer99", level: 8,  kills: 10,  deaths: 50, isBanned: true,  isOnline: false },
+    { name: "Jeb",       level: 38, kills: 175, deaths: 12, isBanned: false, isOnline: true  },
+];
+
+// === 统计函数 ===
+
+// 计算 KD 比（击杀数 / 死亡数，保留两位小数）
+function getKDRatio(kills, deaths) {
+    if (deaths === 0) return kills;
+    return Math.round((kills / deaths) * 100) / 100;
+}
+
+// 打印排行榜
+function printLeaderboard(title, players, getValueFn, unit = "") {
+    console.log(`\n===== ${title} =====`);
+    players.forEach((player, index) => {
+        const value = getValueFn(player);
+        console.log(`${index + 1}. ${player.name} - ${value}${unit}`);
+    });
+}
+
+// === 数据处理 ===
+
+// 1. 过滤掉封禁玩家，只处理正常玩家
+const validPlayers = serverPlayers.filter(p => !p.isBanned);
+
+// 2. 当前在线玩家
+const onlinePlayers = validPlayers.filter(p => p.isOnline);
+console.log(`\n当前在线玩家（${onlinePlayers.length} 人）：`);
+console.log(onlinePlayers.map(p => p.name).join("、"));
+
+// 3. 等级排行榜（前3名）
+const levelRanking = [...validPlayers]
+    .sort((a, b) => b.level - a.level)
+    .slice(0, 3);
+printLeaderboard("等级排行榜 TOP 3", levelRanking, p => p.level, " 级");
+
+// 4. KD 比排行榜
+const kdRanking = [...validPlayers]
+    .sort((a, b) => getKDRatio(b.kills, b.deaths) - getKDRatio(a.kills, a.deaths));
+printLeaderboard("KD 比排行榜", kdRanking, p => getKDRatio(p.kills, p.deaths));
+
+// 5. 全服统计数据
+const totalKills  = validPlayers.reduce((sum, p) => sum + p.kills, 0);
+const totalDeaths = validPlayers.reduce((sum, p) => sum + p.deaths, 0);
+const avgLevel    = validPlayers.reduce((sum, p) => sum + p.level, 0) / validPlayers.length;
+
+console.log("\n===== 全服统计 =====");
+console.log(`有效玩家总数：${validPlayers.length}`);
+console.log(`全服总击杀数：${totalKills}`);
+console.log(`全服总死亡数：${totalDeaths}`);
+console.log(`玩家平均等级：${Math.round(avgLevel * 10) / 10}`);
+
+// 6. 找出 KD 比最高的玩家
+const mvp = validPlayers.reduce((best, player) => {
+    return getKDRatio(player.kills, player.deaths) > getKDRatio(best.kills, best.deaths)
+        ? player
+        : best;
+});
+console.log(`\nMVP 玩家：${mvp.name}（KD 比 ${getKDRatio(mvp.kills, mvp.deaths)}）`);
+```
+
+输出结果：
+
+```
+当前在线玩家（4 人）：Steve、Alex、Notch、Jeb
+
+===== 等级排行榜 TOP 3 =====
+1. Herobrine - 50 级
+2. Notch - 45 级
+3. Jeb - 38 级
+
+===== KD 比排行榜 =====
+1. Herobrine - 60
+2. Notch - 26.25
+3. Jeb - 14.58
+4. Steve - 8
+5. Alex - 4.25
+
+===== 全服统计 =====
+有效玩家总数：5
+全服总击杀数：890
+全服总死亡数：60
+玩家平均等级：37
+
+MVP 玩家：Herobrine（KD 比 60）
+```
+
+---
+
+## 1.6.10 Minecraft Script API 中的实际应用预览
+
+在真实的 Script API 开发中，这些数组方法会被大量用于处理玩家列表和实体列表：
+
+```javascript
+import { world } from "@minecraft/server";
+
+// 每60秒进行一次全服健康检查和公告
+system.runInterval(() => {
+    const allPlayers = world.getPlayers();
+
+    if (allPlayers.length === 0) return;
+
+    // 找出所有血量低于5的玩家
+    const endangeredPlayers = allPlayers.filter(player => {
+        const health = player.getComponent("minecraft:health").currentValue;
+        return health < 5;
+    });
+
+    // 如果有玩家处于危险状态，向全服广播
+    if (endangeredPlayers.some(p => p)) {
+        const names = endangeredPlayers.map(p => p.name).join("、");
+        world.sendMessage(`[系统警告] 以下玩家血量极低，请注意：${names}`);
+    }
+
+    // 统计并广播在线人数
+    const playerCount = allPlayers.length;
+    const playerList  = allPlayers.map(p => p.name).join("、");
+    world.sendMessage(`[服务器] 当前在线 ${playerCount} 人：${playerList}`);
+
+}, 1200);  // 1200 游戏刻 = 60 秒
+```
+
+---
+
+## 本节知识总结
+
+| 方法 | 作用 | 返回值 | 改变原数组 |
+|------|------|--------|------------|
+| `forEach` | 遍历每个元素 | `undefined` | 否 |
+| `filter` | 筛选满足条件的元素 | 新数组 | 否 |
+| `map` | 把每个元素变换为新值 | 新数组（等长） | 否 |
+| `find` | 查找第一个满足条件的元素 | 元素本身或 `undefined` | 否 |
+| `findIndex` | 查找第一个满足条件的元素的下标 | 下标或 `-1` | 否 |
+| `some` | 是否有元素满足条件 | 布尔值 | 否 |
+| `every` | 是否所有元素都满足条件 | 布尔值 | 否 |
+| `reduce` | 把数组归纳为单个值 | 任意类型 | 否 |
+| `sort` | 对数组排序 | 原数组 | **是** |
+
+---
+
+## 课后练习
+
+**练习1：** 有如下物品数据：
+```javascript
+const items = [
+    { name: "钻石剑", damage: 7,  rarity: "稀有",  count: 1 },
+    { name: "木剑",   damage: 4,  rarity: "普通",  count: 3 },
+    { name: "弓",     damage: 0,  rarity: "普通",  count: 2 },
+    { name: "末影珍珠",damage: 0, rarity: "稀有",  count: 5 },
+    { name: "钻石",   damage: 0,  rarity: "稀有",  count: 8 },
+];
+```
+用数组方法完成：筛选出所有稀有物品，提取它们的名称，按名字字母顺序排序，最后输出一行用顿号连接的字符串。
+
+**练习2：** 继续使用上面的 `items` 数组，用 `reduce` 计算背包中所有物品的总数量（`count` 之和）。
+
+**练习3（思考题）：** `sort` 会直接修改原数组，在什么场景下这会造成问题？你会怎么处理？用代码举一个具体的例子说明。
+
+---
+
+> **下一节预告：1.7 异步与事件机制**
+>
+> 到目前为止，我们写的代码都是"从上到下，一行一行执行"的。但在 Minecraft Script API 中，有很多操作不是立刻完成的——比如等待一段时间后再执行某个操作，或者同时处理多件事。这需要用到 JavaScript 中一个非常重要的概念：**异步**。下一节我们会用直观的类比，帮你建立对异步编程的基本认识，为正式进入 Script API 的深度开发做好准备。

@@ -1,0 +1,549 @@
+---
+sidebar_position: 4
+---
+# 1.4 循环与批量操作
+
+## 前言：让程序学会"重复劳动"
+
+在上一节中，我们学会了用函数来避免重复写相同的代码。但函数解决的是"同一段逻辑在不同地方调用"的问题。还有另一种重复：**对一批数据，挨个执行相同的操作**。
+
+回想一下 Minecraft 里的场景：你想给服务器里所有在线玩家发一条公告，或者把一排方块全部替换成石头，或者检查某个区域内所有实体的状态。这些操作的共同点是：同一件事，要做很多遍。
+
+如果用我们目前学到的知识来处理，只能这样写：
+
+```javascript
+sendMessage(player1, "服务器将在5分钟后重启！");
+sendMessage(player2, "服务器将在5分钟后重启！");
+sendMessage(player3, "服务器将在5分钟后重启！");
+// ...一直写到第100个玩家
+```
+
+这显然不现实。**循环**就是解决这个问题的工具。它让程序自动重复执行一段代码，直到满足某个终止条件为止。
+
+:::note
+本节内容会涉及一定有关数组与对象的内容。这是1.5节所介绍的内容。建议在阅读完1.5节后再次看一遍本节，可以对部分内容有更深刻的理解。
+:::
+
+---
+
+## 1.4.1 while 循环：满足条件就一直执行
+
+`while` 是最基础的循环结构，它的含义是："**只要**条件成立，就一直执行大括号里的代码。"
+
+```javascript
+while (条件) {
+    // 条件成立时反复执行的代码
+}
+```
+
+来看一个直观的例子——模拟倒计时：
+
+```javascript
+let countdown = 5;
+
+while (countdown > 0) {
+    console.log(`服务器将在 ${countdown} 秒后重启...`);
+    countdown--;   // 每次循环，倒计时减1
+}
+
+console.log("服务器正在重启！");
+```
+
+输出结果：
+
+```
+服务器将在 5 秒后重启...
+服务器将在 4 秒后重启...
+服务器将在 3 秒后重启...
+服务器将在 2 秒后重启...
+服务器将在 1 秒后重启...
+服务器正在重启！
+```
+
+程序执行的步骤是这样的：
+
+1. 检查条件：`countdown > 0`，即 `5 > 0`，成立，执行大括号里的代码
+2. 输出信息，然后 `countdown` 变为 4
+3. 回到顶部，检查条件：`4 > 0`，成立，继续执行
+4. 输出信息，然后 `countdown` 变为 3
+5. ……如此重复
+6. 当 `countdown` 变为 0，检查条件：`0 > 0`，不成立，退出循环
+7. 执行循环后面的代码
+
+:::danger
+无限循环是初学者最常犯的错误之一。如果你的循环条件永远成立，程序就会永远运行下去，直到崩溃。
+
+```javascript
+let count = 0;
+
+while (count < 10) {
+    console.log(count);
+    // 忘记写 count++，count 永远是 0，条件永远成立！
+}
+```
+
+每次写 `while` 循环，都要检查：**循环体内有没有让条件趋向于不成立的操作？** 在 Minecraft Script API 中，无限循环会直接导致游戏卡死。
+:::
+
+---
+
+## 1.4.2 do...while 循环：先执行，再判断
+
+`do...while` 和 `while` 非常相似，唯一的区别是：**它会先执行一次循环体，然后再检查条件。** 这意味着循环体里的代码**至少会执行一次**，无论条件是否成立。
+
+```javascript
+do {
+    // 至少执行一次的代码
+} while (条件);
+```
+
+举个例子——模拟玩家尝试开箱：
+
+```javascript
+let attempts = 0;
+let foundLoot = false;
+
+do {
+    attempts++;
+    console.log(`第 ${attempts} 次尝试开箱...`);
+
+    // 模拟50%的概率获得战利品
+    if (Math.random() > 0.5) {
+        foundLoot = true;
+        console.log("获得了战利品！");
+    }
+} while (!foundLoot && attempts < 5);
+
+if (!foundLoot) {
+    console.log("连续5次都没有获得战利品，真是手气不佳。");
+}
+```
+
+`Math.random()` 会返回一个 0 到 1 之间的随机小数。我们在 1.4.5 节会再次用到它。
+
+:::note
+`do...while` 在日常开发中用得不如 `while` 和即将介绍的 `for` 多。但理解"先执行再判断"这个特性是重要的。当你的逻辑明确要求"至少执行一次"时，`do...while` 是比 `while` 更准确的表达。
+:::
+
+---
+
+## 1.4.3 for 循环：最常用的循环结构
+
+`for` 循环是实际开发中用得最多的循环，尤其适合**已知循环次数**的场景。
+
+```javascript
+for (初始化; 条件; 每次循环后执行) {
+    // 循环体
+}
+```
+
+括号里有三个部分，用分号隔开：
+
+1. **初始化**：循环开始前执行一次，通常用来定义计数变量
+2. **条件**：每次循环前检查，条件成立才继续循环
+3. **每次循环后执行**：每次循环体执行完之后运行，通常用来更新计数变量
+
+来看一个基础例子——输出数字 1 到 5：
+
+```javascript
+for (let i = 1; i <= 5; i++) {
+    console.log(`第 ${i} 次循环`);
+}
+```
+
+输出结果：
+
+```
+第 1 次循环
+第 2 次循环
+第 3 次循环
+第 4 次循环
+第 5 次循环
+```
+
+`i` 是循环计数变量，这是约定俗成的命名（来自 index，索引）。如果有嵌套循环，通常依次使用 `i`、`j`、`k`。
+
+:::note
+`for` 循环里用 `let` 声明的计数变量 `i`，只在这个 `for` 循环内部有效，外部访问不到。这是局部作用域的体现，也是我们希望的行为——计数变量不应该泄漏到外部。
+:::
+
+**从大到小的循环：**
+
+```javascript
+for (let i = 10; i >= 1; i--) {
+    console.log(`倒数：${i}`);
+}
+console.log("发射！");
+```
+
+**按步长跳跃的循环：**
+
+```javascript
+// 每次增加 2，只处理偶数
+for (let i = 0; i <= 10; i += 2) {
+    console.log(`偶数：${i}`);
+}
+// 输出：0, 2, 4, 6, 8, 10
+```
+
+**在 Minecraft 场景中的应用——批量生成物品：**
+
+```javascript
+// 模拟给玩家奖励多个物品
+function giveRewards(playerName, rewardCount) {
+    console.log(`正在给 ${playerName} 发放奖励...`);
+
+    for (let i = 1; i <= rewardCount; i++) {
+        console.log(`发放第 ${i} / ${rewardCount} 个奖励物品`);
+    }
+
+    console.log(`${playerName} 的所有奖励已发放完毕。`);
+}
+
+giveRewards("Steve", 5);
+```
+
+输出结果：
+
+```
+正在给 Steve 发放奖励...
+发放第 1 / 5 个奖励物品
+发放第 2 / 5 个奖励物品
+发放第 3 / 5 个奖励物品
+发放第 4 / 5 个奖励物品
+发放第 5 / 5 个奖励物品
+Steve 的所有奖励已发放完毕。
+```
+
+---
+
+## 1.4.4 break 与 continue：控制循环的流程
+
+有时候，我们需要在循环过程中做一些特殊处理：提前结束整个循环，或者跳过某一次循环。
+
+### break：立即终止整个循环
+
+当某个条件满足时，用 `break` 跳出循环，后面的循环次数都不再执行：
+
+```javascript
+// 在玩家列表中搜索名为 "Herobrine" 的玩家
+let players = ["Steve", "Alex", "Herobrine", "Notch", "Jeb"];
+let foundIndex = -1;
+
+for (let i = 0; i < players.length; i++) {
+    console.log(`正在检查第 ${i + 1} 个玩家：${players[i]}`);
+
+    if (players[i] === "Herobrine") {
+        foundIndex = i;
+        console.log("找到了！停止搜索。");
+        break;   // 找到了，没必要继续检查剩下的玩家
+    }
+}
+
+if (foundIndex !== -1) {
+    console.log(`Herobrine 在列表的第 ${foundIndex + 1} 位。`);
+} else {
+    console.log("列表中没有 Herobrine。");
+}
+```
+
+输出结果：
+
+```
+正在检查第 1 个玩家：Steve
+正在检查第 2 个玩家：Alex
+正在检查第 3 个玩家：Herobrine
+找到了！停止搜索。
+Herobrine 在列表的第 3 位。
+```
+
+注意：找到 Herobrine 之后，Notch 和 Jeb 就没有再被检查了，`break` 直接跳出了循环。
+:::info
+在编程语言中，索引通常是以0作为第一位的。在上面的代码中，你可以看到通常情况下初始时会设置为 `i=0`，而非 `i=1` (特殊情况除外)。
+
+在检测 Herobine 的例子中，循环结束的条件是 `i < players.length`，也就是 `i` 小于玩家列表的长度。当 `i` 等于 `players.length` 时，循环就会结束。因此，`Herobrine` 在列表中的位置是 `i + 1`。
+
+(通俗的讲，编程语言中的数数字和现实中数数字都前移了一格，编程中数5个数字：0,1,2,3,4。后续的教程中你也会对此有更深刻的了解。)
+:::
+
+### continue：跳过本次循环，继续下一次
+
+`continue` 不是终止整个循环，而是跳过当前这一次循环剩下的代码，直接进入下一次循环：
+
+```javascript
+// 给所有在线玩家发送消息，但跳过管理员
+let players = [
+    { name: "Steve", isAdmin: false },
+    { name: "Alex", isAdmin: true },
+    { name: "Herobrine", isAdmin: false },
+    { name: "Notch", isAdmin: true },
+];
+
+for (let i = 0; i < players.length; i++) {
+    if (players[i].isAdmin) {
+        console.log(`${players[i].name} 是管理员，跳过。`);
+        continue;   // 跳过管理员，处理下一个玩家
+    }
+
+    console.log(`向 ${players[i].name} 发送公告消息。`);
+}
+```
+
+输出结果：
+
+```
+向 Steve 发送公告消息。
+Alex 是管理员，跳过。
+向 Herobrine 发送公告消息。
+Notch 是管理员，跳过。
+```
+
+:::tip
+`break` 和 `continue` 是控制循环流程的有力工具，但不要过度使用。如果你的循环里到处都是 `break` 和 `continue`，通常意味着这段逻辑可以用其它更清晰的方式来组织。
+
+在 Script API 开发中，`break` 最常见的用途是"找到目标就停止搜索"，`continue` 最常见的用途是"过滤掉不符合条件的元素"。
+:::
+
+---
+
+## 1.4.5 嵌套循环：循环里面的循环
+
+循环内部可以再嵌套另一个循环。外层循环每执行一次，内层循环就会完整地跑一遍。
+
+一个经典的应用场景是处理二维坐标，比如在一个矩形区域内逐个处理方块：
+
+```javascript
+// 标记一个 3x3 区域内所有方块的坐标
+let startX = 0;
+let startZ = 0;
+let size = 3;
+
+console.log("开始标记区域内的方块坐标：");
+
+for (let x = startX; x < startX + size; x++) {
+    for (let z = startZ; z < startZ + size; z++) {
+        console.log(`处理方块坐标：X=${x}, Z=${z}`);
+    }
+}
+```
+
+输出结果：
+
+```
+开始标记区域内的方块坐标：
+处理方块坐标：X=0, Z=0
+处理方块坐标：X=0, Z=1
+处理方块坐标：X=0, Z=2
+处理方块坐标：X=1, Z=0
+处理方块坐标：X=1, Z=1
+处理方块坐标：X=1, Z=2
+处理方块坐标：X=2, Z=0
+处理方块坐标：X=2, Z=1
+处理方块坐标：X=2, Z=2
+```
+
+外层循环（`x`）走一步，内层循环（`z`）就把 0、1、2 全部走完。这就像是在网格上逐行扫描。
+
+在 Minecraft Script API 中，这种模式非常常见，比如检查或修改某个矩形区域内的所有方块。
+
+:::warning
+嵌套循环要注意性能问题。一个三层嵌套循环，如果每层循环100次，总执行次数就是 100 × 100 × 100 = 1,000,000 次。在 Minecraft 中，脚本的执行时间是有限制的，过于复杂的嵌套循环可能导致游戏卡顿甚至脚本超时被终止。
+
+在 Script API 开发中，处理大范围区域时要格外留意这个问题，必要时需要把操作分散到多个游戏刻中执行。这是更进阶的话题，我们在后续章节会涉及。
+:::
+
+---
+
+## 1.4.6 for...of 循环：遍历集合的简洁写法
+
+当你需要遍历一个数组（一组数据的集合，下一节会详细介绍）里的每一个元素时，`for...of` 比传统的 `for` 循环更简洁直观。
+
+```javascript
+for (let 元素 of 集合) {
+    // 对每个元素执行的操作
+}
+```
+
+来看对比：
+
+```javascript
+let playerNames = ["Steve", "Alex", "Herobrine", "Notch"];
+
+// 传统 for 循环写法
+for (let i = 0; i < playerNames.length; i++) {
+    console.log(`玩家：${playerNames[i]}`);
+}
+
+// for...of 写法，更简洁
+for (let name of playerNames) {
+    console.log(`玩家：${name}`);
+}
+```
+
+两种写法的输出结果完全相同，但 `for...of` 不需要关心下标 `i`，直接拿到每个元素的值，在逻辑上更清晰。
+
+一个更完整的例子——向所有玩家发送公告：
+
+```javascript
+// 模拟在线玩家列表
+let onlinePlayers = ["Steve", "Alex", "Herobrine"];
+let announcement = "服务器将在10分钟后进行维护，请做好准备。";
+
+for (let playerName of onlinePlayers) {
+    console.log(`向 ${playerName} 发送：${announcement}`);
+}
+```
+
+输出结果：
+
+```
+向 Steve 发送：服务器将在10分钟后进行维护，请做好准备。
+向 Alex 发送：服务器将在10分钟后进行维护，请做好准备。
+向 Herobrine 发送：服务器将在10分钟后进行维护，请做好准备。
+```
+
+:::note
+如果你在遍历过程中需要用到当前元素的**下标**（即"这是第几个元素"），那么就用传统的 `for` 循环，因为 `for...of` 不提供下标信息。
+
+如果只需要元素的值，用 `for...of`，代码更清晰。
+:::
+
+---
+
+## 1.4.7 实战练习：综合运用循环
+
+现在来写一个综合性的例子：
+
+```javascript
+// === 场景：服务器每日任务结算系统 ===
+
+// 玩家数据，每个玩家有名字、完成的任务数量和是否被封禁
+let players = [
+    { name: "Steve",     tasksCompleted: 5,  isBanned: false },
+    { name: "Alex",      tasksCompleted: 3,  isBanned: false },
+    { name: "Griefer99", tasksCompleted: 0,  isBanned: true  },
+    { name: "Herobrine", tasksCompleted: 10, isBanned: false },
+    { name: "Notch",     tasksCompleted: 7,  isBanned: false },
+];
+
+// 根据完成任务数量计算奖励
+function calculateReward(tasksCompleted) {
+    if (tasksCompleted >= 10) return 500;
+    if (tasksCompleted >= 5)  return 200;
+    if (tasksCompleted >= 1)  return 50;
+    return 0;
+}
+
+// 生成任务完成情况的描述
+function getTaskSummary(tasksCompleted) {
+    if (tasksCompleted === 0) return "未完成任何任务";
+    return `完成了 ${tasksCompleted} 个任务`;
+}
+
+// === 开始结算 ===
+console.log("===== 每日任务结算 =====\n");
+
+let totalRewardGiven = 0;
+let eligibleCount = 0;
+
+for (let player of players) {
+
+    // 跳过被封禁的玩家
+    if (player.isBanned) {
+        console.log(`${player.name}：账号已封禁，跳过结算。`);
+        continue;
+    }
+
+    const reward = calculateReward(player.tasksCompleted);
+    const summary = getTaskSummary(player.tasksCompleted);
+
+    console.log(`${player.name}：${summary}，获得奖励 ${reward} 硬币。`);
+
+    totalRewardGiven += reward;
+    eligibleCount++;
+}
+
+console.log("\n===== 结算完毕 =====");
+console.log(`参与结算的玩家数：${eligibleCount}`);
+console.log(`本次共发放奖励：${totalRewardGiven} 硬币`);
+```
+
+输出结果：
+
+```
+===== 每日任务结算 =====
+
+Steve：完成了 5 个任务，获得奖励 200 硬币。
+Alex：完成了 3 个任务，获得奖励 50 硬币。
+Griefer99：账号已封禁，跳过结算。
+Herobrine：完成了 10 个任务，获得奖励 500 硬币。
+Notch：完成了 7 个任务，获得奖励 200 硬币。
+
+===== 结算完毕 =====
+参与结算的玩家数：4
+本次共发放奖励：950 硬币
+```
+
+---
+
+## 1.4.8 Minecraft Script API 中的实际应用预览
+
+在真实的 Script API 开发中，循环最常见的用途之一是遍历世界里所有的玩家或实体：
+
+```javascript
+import { world } from "@minecraft/server";
+
+// 每隔一段时间检查所有玩家的状态
+system.runInterval(() => {
+    // 获取当前维度中的所有玩家
+    const players = world.getPlayers();
+
+    for (let player of players) {
+        const health = player.getComponent("minecraft:health").currentValue;
+        const playerName = player.name;
+
+        // 血量低于5，发出警告
+        if (health < 5) {
+            player.sendMessage("警告：你的血量极低！");
+            world.sendMessage(`[系统] ${playerName} 处于危险状态，血量 ${health} / 20`);
+        }
+    }
+
+}, 100);   // 每100个游戏刻（约5秒）执行一次
+```
+
+`world.getPlayers()` 返回的是当前所有在线玩家的列表，`for...of` 让我们可以逐一处理每一个玩家。这个模式在 Script API 开发中几乎无处不在。
+
+:::note
+在实际 Script API 开发中，有较 `for` 循环更简洁的用法 `.forEach()`，这类用法相较于`for`循环更加常用。我们会在后续章节中学习。
+:::
+---
+
+## 本节知识总结
+
+| 概念 | 要点 | 适用场景 |
+|------|------|----------|
+| `while` | 条件成立就循环 | 不确定需要循环多少次时 |
+| `do...while` | 先执行一次，再判断条件 | 至少需要执行一次的场景 |
+| `for` | 有明确计数变量的循环 | 已知循环次数时 |
+| `for...of` | 遍历集合中每个元素 | 遍历数组时，不需要下标 |
+| `break` | 立即终止整个循环 | 找到目标后停止搜索 |
+| `continue` | 跳过本次，进入下一次循环 | 过滤不符合条件的元素 |
+| 嵌套循环 | 循环内部再套循环 | 处理二维数据，如坐标区域 |
+| 无限循环 | 条件永远成立 | 要避免，会导致程序崩溃 |
+
+---
+
+## 课后练习
+
+**练习1：** 用 `for` 循环，计算并输出 1 到 100 所有整数的总和。提示：先创建一个变量 `sum = 0`，每次循环都把当前的数字加到 `sum` 上。
+
+**练习2：** 有一个玩家名单 `["Steve", "Alex", "Notch", "Herobrine", "Jeb", "Dinnerbone"]`，用 `for...of` 遍历这个名单，跳过名字长度超过5个字符的玩家，对其余玩家输出 `"向 [名字] 发送了邀请。"` 提示：字符串的长度可以用 `.length` 属性获取，例如 `"Steve".length` 的值是 `5`。
+
+**练习3：** 用嵌套循环，在控制台输出一个 5×5 的坐标网格，格式为 `(0,0) (0,1) (0,2)...`，每行结束后换行。提示：同一行内的输出可以用 `process.stdout.write()` 代替 `console.log()` 来避免自动换行，或者将一整行拼接成一个字符串后再输出。
+
+---
+
+> **下一节预告：1.5 对象与数组**
+>
+> 在这一节的练习和例子里，你已经悄悄接触到了对象（`{ name: "Steve", isBanned: false }`）和数组（`["Steve", "Alex", "Herobrine"]`）。它们是 JavaScript 中最重要的两种数据结构，也是 Minecraft Script API 里几乎所有数据的组织方式。下一节，我们将系统地学习对象和数组，彻底搞清楚它们是什么、怎么用，为进入真正的 API 开发打好最后的基础。

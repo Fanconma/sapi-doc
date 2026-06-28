@@ -1,0 +1,8 @@
+{
+  "label": "3 世界与玩家",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "description": "在此篇章中，你会主要了解 Script API 中有关世界与玩家的内容，这是你第一次开始正式学习 SAPI!"
+  }
+}

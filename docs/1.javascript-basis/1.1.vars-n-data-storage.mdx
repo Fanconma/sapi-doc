@@ -1,0 +1,528 @@
+---
+sidebar_position: 1
+---
+# 1.1 变量与数据存储
+
+## 前言：为什么要学这些？
+
+在我们正式进入 Minecraft Script API 的世界之前，我们需要先打好 JavaScript 的基础。你可能会问："我只是想让我的 Minecraft 世界变得更酷，为什么要学这些枯燥的东西？"
+
+别担心！让我们换一个角度来思考：
+
+想象你在玩 Minecraft，你需要记住很多东西——你的坐标、你背包里有多少钻石、你建造的房子叫什么名字。**你的大脑就是在"存储数据"。** 而在编程中，我们用**变量**来帮助计算机"记住"这些东西。
+
+掌握了变量，你就迈出了编程最重要的第一步！
+
+---
+
+## 1.1.1 什么是变量？
+
+**变量就是一个"盒子"**，你可以往里面放东西，给它贴上标签，之后随时取出来用。
+
+来看一个生活中的例子：
+
+```
+盒子标签：我的钻石数量
+盒子里面：64
+```
+
+在 JavaScript 中，我们这样写：
+
+```javascript
+let myDiamonds = 64;
+```
+
+就这一行，你告诉了计算机三件事：
+1. `let` → "我要创建一个盒子"
+2. `myDiamonds` → "这个盒子的标签叫 myDiamonds（我的钻石）"
+3. `= 64` → "盒子里面装的是数字 64"
+
+:::tip 
+**分号是什么？**
+
+行末的 `;` 就像中文句子末尾的句号，告诉计算机"这句话说完了"。在 JavaScript 中养成写分号的习惯是个好习惯！
+:::
+
+---
+
+## 1.1.2 创建变量的三种方式：let、const、var
+
+JavaScript 里有三种方式可以创建变量，它们各有不同的用途。初学阶段你只需要重点掌握前两种。
+
+### `let`：普通的可变盒子
+
+`let` 创建的变量，里面的内容**可以随时更换**。
+
+```javascript
+let playerHealth = 20;   // 玩家血量是 20
+playerHealth = 15;       // 受伤了，血量变成 15
+playerHealth = 20;       // 回血了，又变回 20
+```
+
+你可以把用 `let` 创建的变量想象成一个**可以反复打开、更换内容的盒子**。
+
+### `const`：锁死的盒子
+
+`const` 是 "constant"（常量）的缩写，用它创建的变量，内容**一旦设定就不能更改**。
+
+```javascript
+const gameName = "Minecraft";   // 游戏名字永远是 Minecraft
+const maxStackSize = 64;        // 物品最大堆叠数永远是 64
+```
+
+如果你试图修改 `const` 的值，程序会报错：
+
+```javascript
+const maxStackSize = 64;
+maxStackSize = 128;   // 报错：Uncaught TypeError: Assignment to constant variable.
+```
+
+:::tip
+ **什么时候用 `let`，什么时候用 `const`？**
+- 如果这个值**以后会变**（比如玩家血量、分数）→ 用 `let`
+- 如果这个值**永远不变**（比如游戏名称、固定配置）→ 用 `const`
+:::
+
+### `var`：老式的盒子
+
+`var` 是 JavaScript 早期的变量创建方式，现在基本已经不使用了。
+
+```javascript
+var oldWay = "这是老写法";   // 能用，但不推荐
+```
+
+:::note 
+**在本教程中，我们几乎不会使用 `var`。** 在 Minecraft Script API 的代码里，你也应该优先使用 `let` 和 `const`。提到它只是因为你可能在网上看到别人的旧代码时会遇到它。
+:::
+---
+
+## 1.1.3 数据类型：盒子里可以装什么？
+
+不同的盒子可以装不同的东西。在 JavaScript 中，变量里存储的数据有不同的**类型**。
+
+让我们用 Minecraft 的例子来认识每一种类型：
+
+---
+
+### 数字（Number）
+
+数字类型可以存储整数或小数。
+
+```javascript
+let playerHealth = 20;          // 整数：玩家血量
+let attackDamage = 3.5;         // 小数：攻击伤害
+let currentLevel = 0;           // 零也是数字
+let debt = -10;                 // 负数也可以
+```
+
+数字可以直接进行数学运算：
+
+```javascript
+let diamonds = 10;
+let ironOre = 25;
+let totalOres = diamonds + ironOre;   // totalOres 现在是 35
+
+let halfHealth = 20 / 2;             // halfHealth 是 10
+let doubleDamage = 3.5 * 2;          // doubleDamage 是 7
+```
+
+**常见的数学运算符：**
+
+| 符号 | 意义 | 示例 | 结果 |
+|------|------|------|------|
+| `+` | 加法 | `10 + 5` | `15` |
+| `-` | 减法 | `20 - 8` | `12` |
+| `*` | 乘法 | `4 * 3` | `12` |
+| `/` | 除法 | `15 / 3` | `5` |
+| `%` | 取余（求余数） | `10 % 3` | `1` |
+| `**` | 幂运算 | `2 ** 3` | `8` |
+
+:::tip
+**取余运算 `%` 是什么？**
+
+`10 % 3` 的意思是：10 除以 3，获得它的余数。即为 1（因为 3×3=9，10-9=1）。
+
+在游戏里，这个运算经常用来判断"每隔几次触发一次"。
+:::
+---
+
+### 字符串（String）
+
+字符串就是**一段文字**。文字必须用引号包裹起来，单引号 `'`、双引号 `"` 或反引号 `` ` `` 都可以。
+
+```javascript
+let playerName = "Steve";              // 双引号
+let worldName = 'My Awesome World';    // 单引号
+let welcomeMsg = `Welcome to Minecraft!`;  // 反引号（模板字符串）
+```
+
+**拼接字符串：**
+
+你可以用 `+` 把多个字符串拼在一起：
+
+```javascript
+let playerName = "Steve";
+let greeting = "Hello, " + playerName + "!";
+// greeting 的值是："Hello, Steve!"
+```
+
+**更推荐的写法——模板字符串（Template Literals）：**
+
+使用反引号 `` ` `` 和 `${}` 语法，可以更方便地把变量插入字符串中：
+
+```javascript
+let playerName = "Steve";
+let playerHealth = 20;
+
+let statusMsg = `玩家 ${playerName} 当前血量为 ${playerHealth} 点`;
+// 结果："玩家 Steve 当前血量为 20 点"
+```
+
+`${}` 里面可以放任何变量，甚至可以放计算式：
+
+```javascript
+let price = 5;
+let amount = 3;
+let receipt = `你购买了 ${amount} 个物品，共花费 ${price * amount} 个绿宝石`;
+// 结果："你购买了 3 个物品，共花费 15 个绿宝石"
+```
+
+:::tip 
+**建议优先使用模板字符串！** 它在 Minecraft Script API 中写日志、调试信息时非常好用。
+:::
+
+---
+
+### 布尔值（Boolean）
+
+布尔值只有两个可能的值：`true`（真）或 `false`（假）。
+
+它就像一个**开关**，只有"开"和"关"两种状态。
+
+```javascript
+let isRaining = true;         // 正在下雨：是
+let hasKey = false;           // 拥有钥匙：否
+let isPlayerAlive = true;     // 玩家存活：是
+let isDaytime = false;        // 是白天吗：不是
+```
+
+在 Minecraft Script API 中，你会大量遇到布尔值，比如判断玩家是否在地面上、是否在下雨、某个功能是否开启等等。
+
+---
+
+### 空值（null 和 undefined）
+
+这两个类型都表示"没有值"，但含义略有不同：
+
+**`undefined`：从来没有被赋值过**
+
+```javascript
+let mysteryBox;   // 创建了盒子，但什么都没放进去
+console.log(mysteryBox);   // 输出：undefined
+```
+
+**`null`：明确表示"这里是空的"**
+
+```javascript
+let targetPlayer = null;   // 目前没有目标玩家，明确设为空
+```
+
+:::tip
+ **`null` 和 `undefined` 的通俗解释：**
+- `undefined` 就像一个**还没有被打开过的快递盒**，你甚至不知道里面应该装什么
+- `null` 就像一个**故意空着的盒子**，你知道它是空的，这是你主动的选择
+ 
+刚开始不用太纠结这两者的区别，随着学习深入你会自然理解的。
+:::
+---
+
+## 1.1.4 查看变量的值：console.log()
+
+在编程中，我们经常需要"看一眼"某个变量里装的是什么，这时候就用 `console.log()`。
+
+```javascript
+let playerName = "Alex";
+let playerHealth = 18;
+let isAlive = true;
+
+console.log(playerName);      // 输出：Alex
+console.log(playerHealth);    // 输出：18
+console.log(isAlive);         // 输出：true
+```
+
+你也可以一次输出多个值，用逗号分隔：
+
+```javascript
+console.log("玩家名称：", playerName, "血量：", playerHealth);
+// 输出：玩家名称：Alex 血量：18
+```
+
+或者用模板字符串让输出更漂亮：
+
+```javascript
+console.log(`玩家 ${playerName} 的当前血量是 ${playerHealth}`);
+// 输出：玩家 Alex 的当前血量是 18
+```
+
+:::tip
+ **在 Minecraft Script API 中的说明：**
+
+在标准的 JavaScript 环境（比如浏览器或 Node.js）中，`console.log()` 会把信息打印到控制台。
+
+在 Minecraft Script API 里，我们通常会使用类似 `world.sendMessage()` 这样的方法来在游戏中显示信息，但 `console.log()` 依然可以用于调试（查找错误）。我们会在后续章节详细介绍。
+:::
+---
+
+## 1.1.5 变量命名规则：怎么给盒子取名字？
+
+变量的名字不能随便取，有一些规则必须遵守，另外也有一些规范建议你遵循。
+
+### 必须遵守的规则（不遵守会报错）
+
+1. **不能以数字开头**
+   ```javascript
+   let 1player = "Steve";    // ❌
+   let player1 = "Steve";    // ✅ 
+   ```
+
+2. **不能包含空格**
+   ```javascript
+   let player name = "Steve";   // ❌ 
+   let playerName = "Steve";    // ✅ 
+   ```
+
+3. **不能使用 JavaScript 的保留关键字**
+   ```javascript
+   let let = 10;      // ❌ let 是关键字
+   let if = true;     // ❌ if 是关键字
+   let myLet = 10;    // ✅ 
+   ```
+
+4. **区分大小写**
+   ```javascript
+   let playerHealth = 20;
+   let PlayerHealth = 30;   // 这是两个不同的变量！
+   ```
+
+### 推荐遵循的规范（不遵守不报错，但代码会很难读）
+
+**使用驼峰命名法（camelCase）：**
+
+当变量名由多个单词组成时，第一个单词全小写，之后每个单词首字母大写：
+
+```javascript
+// 驼峰命名法
+let playerHealth = 20;
+let maxInventorySize = 36;
+let isNightTime = false;
+let currentWorldName = "My World";
+
+// 下划线命名（在 JS 中不常见）（不推荐）
+let player_health = 20;
+
+// 全部小写（多词时难以阅读）（不推荐）
+let playerhealthpoints = 20;
+```
+
+**名字要有意义：**
+
+```javascript
+// 不好的命名：
+let x = 20;
+let abc = "Steve";
+let temp123 = true;
+
+// 好的命名：
+let playerHealth = 20;
+let playerName = "Steve";
+let isPlayerOnGround = true;
+```
+
+:::tip 
+**好的命名习惯会让你的代码更容易被自己和别人读懂。** 
+
+三个月后当你回来看自己的代码时，你会感谢过去那个认真命名的自己。
+:::
+---
+
+## 1.1.6 修改变量的值
+
+用 `let` 创建的变量，可以随时赋予新的值：
+
+```javascript
+let playerHealth = 20;
+console.log(playerHealth);   // 输出：20
+
+playerHealth = 15;           // 受到了伤害
+console.log(playerHealth);   // 输出：15
+
+playerHealth = 20;           // 回血了
+console.log(playerHealth);   // 输出：20
+```
+
+:::note
+修改已有变量时，**不需要再写 `let`**，直接写变量名就好。
+:::
+
+**基于原来的值进行修改：**
+
+```javascript
+let score = 100;
+score = score + 50;    // 加了 50 分
+console.log(score);    // 输出：150
+
+score = score - 20;    // 扣了 20 分
+console.log(score);    // 输出：130
+```
+
+这种"自己加减自己"的操作非常常见，JavaScript 提供了更简短的写法：
+
+```javascript
+let score = 100;
+
+score += 50;    // 等同于 score = score + 50
+score -= 20;    // 等同于 score = score - 20
+score *= 2;     // 等同于 score = score * 2
+score /= 4;     // 等同于 score = score / 4
+
+// 专门用于整数加1、减1的快捷写法：
+score++;        // 等同于 score = score + 1
+score--;        // 等同于 score = score - 1
+```
+
+---
+
+## 1.1.7 实战小练习：用变量描述一个玩家
+
+现在让我们用学到的知识，写一段代码来描述一个 Minecraft 玩家的状态：
+
+```javascript showLineNumbers
+// === 玩家基本信息 ===
+const playerName = "Herobrine";       // 玩家名字（不会变，用 const）
+let playerHealth = 20;                // 当前血量
+let playerHunger = 18;                // 饥饿值
+let playerLevel = 30;                 // 经验等级
+let isOnGround = true;                // 是否在地面上
+let currentBiome = "森林";            // 当前所在的生物群系
+
+// === 输出玩家状态 ===
+console.log(`=== ${playerName} 的状态 ===`);
+console.log(`血量：${playerHealth} / 20`);
+console.log(`饥饿值：${playerHunger} / 20`);
+console.log(`经验等级：${playerLevel}`);
+console.log(`在地面上：${isOnGround}`);
+console.log(`当前位置：${currentBiome}`);
+
+// === 模拟游戏中发生的事情 ===
+// 玩家受到了 5 点伤害
+playerHealth -= 5;
+console.log(`\n受到攻击！血量变为：${playerHealth}`);
+
+// 玩家吃了一个苹果，回了 4 点饥饿值
+playerHunger += 4;
+if (playerHunger > 20) playerHunger = 20;  // 饥饿值不能超过 20
+console.log(`吃了苹果！饥饿值变为：${playerHunger}`);
+
+// 玩家升级了
+playerLevel++;
+console.log(`升级了！当前等级：${playerLevel}`);
+```
+:::info
+有关 `if` 的内容会在后续章节学习，当前不必过于担心。
+:::
+**运行结果：**
+
+```
+=== Herobrine 的状态 ===
+血量：20 / 20
+饥饿值：18 / 20
+经验等级：30
+在地面上：true
+当前位置：森林
+
+受到攻击！血量变为：15
+吃了苹果！饥饿值变为：20
+升级了！当前等级：31
+```
+
+:::tip
+**你注意到 `\n` 了吗？**
+
+在字符串中，`\n` 代表"换行"，作用就像按了一次回车键。这叫做**转义字符**，后面我们还会遇到它。
+:::
+---
+
+## 1.1.8 Minecraft Script API 中的实际应用预览
+
+学了这些，在真实的 Minecraft Script API 代码里会长什么样？给你一个小小的预览（现在看不懂没关系，只是让你感受一下方向）：
+
+```javascript
+import { world, system } from "@minecraft/server";
+
+// 使用变量存储各种数据
+const WELCOME_MESSAGE = "欢迎来到我的服务器！";  // 常量配置
+let onlinePlayerCount = 0;                        // 在线玩家数量
+
+// 当玩家进入游戏时触发
+world.afterEvents.playerSpawn.subscribe((event) => {
+    const player = event.player;               // 获取玩家对象（存入变量）
+    const playerName = player.name;            // 获取玩家名字
+    
+    onlinePlayerCount++;                       // 在线人数加一
+    
+    // 向所有玩家发送欢迎消息（用到了模板字符串）
+    world.sendMessage(`${playerName} 加入了游戏！当前在线人数：${onlinePlayerCount}`);
+    
+    // 向该玩家单独发送消息
+    player.sendMessage(WELCOME_MESSAGE);
+});
+```
+
+你看，我们在这个真实的 API 代码中用到了：
+- `const` 定义不变的欢迎消息
+- `let` 定义会变化的在线人数
+- 变量来存储玩家信息
+- 模板字符串来拼接消息
+- `++` 运算符来增加计数
+
+这就是为什么变量如此重要——它是一切代码的基础！
+
+---
+
+## 1.1.9 本节知识总结
+
+让我们回顾一下这一节学了什么：
+
+| 概念 | 要点 | 示例 |
+|------|------|------|
+| `let` | 创建可变变量 | `let hp = 20;` |
+| `const` | 创建不可变常量 | `const name = "MC";` |
+| `var` | 旧式写法，不推荐 | `var x = 1;` |
+| Number | 数字类型 | `let score = 100;` |
+| String | 字符串类型 | `let msg = "Hello";` |
+| Boolean | 布尔值，true/false | `let flag = true;` |
+| null | 明确的空值 | `let target = null;` |
+| undefined | 未赋值 | `let box;` |
+| 模板字符串 | 用反引号和 `${}` 插入变量 | `` `HP: ${hp}` `` |
+| `console.log()` | 输出/查看变量值 | `console.log(hp);` |
+| 驼峰命名法 | 变量命名规范 | `playerHealth` |
+| `+=` `-=` `*=` | 快捷赋值运算 | `hp -= 5;` |
+| `++` `--` | 加一/减一 | `level++;` |
+
+---
+
+## 课后练习
+
+试着自己写代码解决以下问题：
+
+**练习 1：** 创建变量来描述你理想中的 Minecraft 角色，包括：名字、血量、所持有的钻石数量、是否是创造模式。
+
+**练习 2：** 假设你的角色挖到了一个钻石矿脉，获得了 8 颗钻石，用代码表示钻石数量的变化，并用模板字符串输出"挖矿前：X颗，挖矿后：X颗"。
+
+**练习 3：** 思考一下，在一个 Minecraft 服务器插件中，哪些数据适合用 `const`，哪些适合用 `let`？尝试各举3个例子。
+
+---
+
+> **下一节预告：1.2 条件判断与逻辑控制**
+> 
+> 现在你已经能够存储数据了，但光存储还不够——我们还需要让程序能够"做判断"。比如：血量低于5就逃跑、是夜晚就点燃火把、玩家等级超过10才能进入某个区域……这些都需要用到**条件判断**。下一节见！

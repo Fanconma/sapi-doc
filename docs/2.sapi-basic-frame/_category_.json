@@ -1,0 +1,8 @@
+{
+  "label": "2 Script API 基础架构",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "在此篇章中，你会聚焦于有关 Script API 基础架构的了解。此章内容主要作用是初览 Script API 的整体架构及作用，不涉及了解具体 Script API 内容。看到本章中复杂代码时，不必慌张，后续章节将陆续让你了解。"
+  }
+}

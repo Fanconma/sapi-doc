@@ -1,0 +1,8 @@
+{
+  "label": "1 JavaScript 基础知识",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "在此篇章中，你会对JavaScript有最基础的了解，方便后续SAPI的编写。"
+  }
+}

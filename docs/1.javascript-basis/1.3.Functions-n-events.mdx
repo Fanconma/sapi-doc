@@ -1,0 +1,634 @@
+---
+sidebar_position: 3
+---
+# 1.3 函数与事件处理
+
+## 前言：让代码学会"重复利用"
+
+在前两节中，我们学会了存储数据和做条件判断。但如果你仔细观察我们写过的代码，会发现一个问题：每次需要检查玩家血量、输出状态信息，我们都要把相同的逻辑重新写一遍。
+
+想象一下，你在 Minecraft 里建造了一个非常漂亮的路灯。如果你想在城市的每条街道都放上这种路灯，你不会每次都从零开始建造——你会把它做成一个**蓝图**，然后按照蓝图批量建造。
+
+**函数就是代码的蓝图。** 你把一段逻辑写进函数里，之后在任何需要的地方，只需要一行代码就能调用它。
+
+这一节我们还会接触**事件处理**的概念，这是 Minecraft Script API 中最核心的机制之一。
+
+---
+
+## 1.3.1 为什么需要函数？
+
+先来看一个没有使用函数的例子，感受一下问题所在：
+
+```javascript
+// 玩家1加入游戏
+let player1Name = "Steve";
+let player1Health = 20;
+console.log(`欢迎，${player1Name}！`);
+console.log(`${player1Name} 的血量：${player1Health} / 20`);
+console.log(`${player1Name} 已准备就绪。`);
+
+// 玩家2加入游戏
+let player2Name = "Alex";
+let player2Health = 18;
+console.log(`欢迎，${player2Name}！`);
+console.log(`${player2Name} 的血量：${player2Health} / 20`);
+console.log(`${player2Name} 已准备就绪。`);
+
+// 玩家3加入游戏
+let player3Name = "Herobrine";
+let player3Health = 20;
+console.log(`欢迎，${player3Name}！`);
+console.log(`${player3Name} 的血量：${player3Health} / 20`);
+console.log(`${player3Name} 已准备就绪。`);
+```
+
+你发现了什么？同样的逻辑被复制粘贴了三次。如果有100个玩家，这段代码会长得离谱。更糟糕的是，如果你想修改欢迎信息的格式，就需要改100个地方，而且很容易漏改。
+
+用函数来改写，只需要这样：
+
+```javascript
+function greetPlayer(name, health) {
+    console.log(`欢迎，${name}！`);
+    console.log(`${name} 的血量：${health} / 20`);
+    console.log(`${name} 已准备就绪。`);
+}
+
+greetPlayer("Steve", 20);
+greetPlayer("Alex", 18);
+greetPlayer("Herobrine", 20);
+```
+
+代码量少了一半，逻辑只写了一次，修改时也只需要改一个地方。这就是函数的价值。
+
+---
+
+## 1.3.2 定义函数：function 关键字
+
+定义一个函数，使用 `function` 关键字：
+
+```javascript
+function 函数名称() {
+    // 这里写函数要执行的代码
+}
+```
+
+定义完函数之后，函数里的代码不会自动执行。你需要**调用**它，才会真正运行：
+
+```javascript
+// 定义函数
+function checkTime() {
+    console.log("正在检查当前时间...");
+    console.log("检查完毕。");
+}
+
+// 调用函数
+checkTime();   // 执行这行，函数里的代码才会运行
+checkTime();   // 可以调用任意多次
+```
+
+输出结果：
+
+```
+正在检查当前时间...
+检查完毕。
+正在检查当前时间...
+检查完毕。
+```
+
+函数名的命名规则和变量相同，也推荐使用驼峰命名法。函数通常用**动词开头**来命名，因为函数是用来"做某件事"的：
+
+```javascript
+function checkPlayerHealth() { ... }    // 检查玩家血量
+function sendWelcomeMessage() { ... }   // 发送欢迎消息
+function spawnMonster() { ... }         // 生成怪物
+function calculateDamage() { ... }      // 计算伤害
+```
+
+---
+
+## 1.3.3 参数：给函数传递信息
+
+很多时候，函数需要接收一些外部信息才能工作。比如"欢迎玩家"这个函数，需要知道玩家叫什么名字。
+
+我们通过**参数**来给函数传递这些信息。参数写在函数名后面的括号里：
+
+```javascript
+function greetPlayer(playerName) {
+    console.log(`欢迎来到服务器，${playerName}！`);
+}
+
+greetPlayer("Steve");      // 输出：欢迎来到服务器，Steve！
+greetPlayer("Alex");       // 输出：欢迎来到服务器，Alex！
+greetPlayer("Herobrine");  // 输出：欢迎来到服务器，Herobrine！
+```
+
+`playerName` 就是参数，它就像函数专属的一个临时变量，每次调用函数时赋予不同的值。
+
+函数可以有多个参数，用逗号分隔：
+
+```javascript
+function showPlayerStatus(name, health, level) {
+    console.log(`--- ${name} 的状态 ---`);
+    console.log(`血量：${health} / 20`);
+    console.log(`等级：${level}`);
+}
+
+showPlayerStatus("Steve", 20, 30);
+showPlayerStatus("Alex", 14, 12);
+```
+
+输出结果：
+
+```
+--- Steve 的状态 ---
+血量：20 / 20
+等级：30
+--- Alex 的状态 ---
+血量：14 / 20
+等级：12
+```
+
+:::note
+调用函数时传入的值叫做**实参**（argument），函数定义时括号里的占位名字叫做**形参**（parameter）。在日常交流中，大家通常都统称为"参数"，不用特别纠结这个区别。
+
+但有一点要记住：调用函数时，实参的**顺序**必须和形参一致。`showPlayerStatus("Steve", 20, 30)` 中，`"Steve"` 对应 `name`，`20` 对应 `health`，`30` 对应 `level`，顺序不能搞错。
+:::
+
+**参数的默认值：**
+
+如果调用函数时某个参数没有传入，你可以为它设置一个默认值：
+
+```javascript
+function greetPlayer(playerName, greeting = "欢迎来到服务器") {
+    console.log(`${greeting}，${playerName}！`);
+}
+
+greetPlayer("Steve");                        // 使用默认问候语
+greetPlayer("Alex", "很高兴再次见到你");     // 使用自定义问候语
+```
+
+输出结果：
+
+```
+欢迎来到服务器，Steve！
+很高兴再次见到你，Alex！
+```
+
+---
+
+## 1.3.4 返回值：让函数给你一个结果
+
+函数不只是用来执行操作的，它还可以**计算一个结果并把结果交还给你**。用 `return` 关键字来返回值：
+
+```javascript
+function calculateDamage(baseDamage, multiplier) {
+    let finalDamage = baseDamage * multiplier;
+    return finalDamage;
+}
+
+let damage = calculateDamage(5, 1.5);
+console.log(`最终伤害：${damage}`);   // 输出：最终伤害：7.5
+```
+
+`return` 做了两件事：
+1. 把 `finalDamage` 的值"送出"函数
+2. **立即结束函数的执行**，`return` 之后的代码不会运行
+
+因为有了返回值，函数的结果可以直接参与运算或存入变量：
+
+```javascript
+function getHealthPercentage(currentHealth, maxHealth) {
+    return (currentHealth / maxHealth) * 100;
+}
+
+let healthPercent = getHealthPercentage(14, 20);
+console.log(`血量百分比：${healthPercent}%`);   // 输出：血量百分比：70%
+
+// 也可以直接把函数调用放进模板字符串
+console.log(`当前血量：${getHealthPercentage(8, 20)}%`);  // 输出：当前血量：40%
+```
+
+`return` 也可以提前结束函数，用于处理不合法的输入：
+
+```javascript
+function checkPlayerLevel(level) {
+    if (level < 0) {
+        console.log("错误：等级不能为负数。");
+        return;   // 直接结束函数，下面的代码不会执行
+    }
+
+    if (level >= 30) {
+        console.log("你已达到高级玩家标准，可以挑战末地。");
+    } else {
+        console.log(`当前等级 ${level}，距离挑战末地还需 ${30 - level} 级。`);
+    }
+}
+
+checkPlayerLevel(-5);   // 输出：错误：等级不能为负数。
+checkPlayerLevel(15);   // 输出：当前等级 15，距离挑战末地还需 15 级。
+checkPlayerLevel(35);   // 输出：你已达到高级玩家标准，可以挑战末地。
+```
+
+:::tip
+用 `return` 提前结束函数来处理非法输入，是一种非常常见且推荐的编程技巧，有时被称为"提前返回"或"守卫子句"（Guard Clause）。它的好处是让代码的主要逻辑不被大量的 `if...else` 嵌套包裹，使代码更清晰易读。
+
+在 Script API 的实际开发中，你会频繁用到这个技巧，比如在事件处理函数里首先判断触发事件的是不是玩家，不是的话直接 `return`。
+:::
+
+---
+
+## 1.3.5 函数表达式与箭头函数
+
+在 JavaScript 里，除了用 `function` 关键字定义函数，还有另外两种写法，它们在 Minecraft Script API 的代码中**极为常见**，必须认识。
+
+### 函数表达式
+
+把一个函数直接赋值给一个变量：
+
+```javascript
+const greetPlayer = function(playerName) {
+    console.log(`欢迎，${playerName}！`);
+};
+
+greetPlayer("Steve");   // 输出：欢迎，Steve！
+```
+
+这里的函数被存进了 `greetPlayer` 这个变量里。调用方式和普通函数完全相同。
+
+### 箭头函数（Arrow Function）
+
+箭头函数是 ES6 引入的更简洁的函数写法，在现代 JavaScript 中非常普遍（在Script API中，其甚至比直接的 `function` 申明更为普遍）：
+
+```javascript
+const greetPlayer = (playerName) => {
+    console.log(`欢迎，${playerName}！`);
+};
+
+greetPlayer("Steve");   // 输出：欢迎，Steve！
+```
+
+和普通函数相比，箭头函数用 `=>` 取代了 `function` 关键字。
+
+当函数体只有一行，且需要返回一个值时，可以省略大括号和 `return`，进一步简化：
+
+```javascript
+// 完整写法
+const double = (n) => {
+    return n * 2;
+};
+
+// 简化写法（只有一行 return 时）
+const double = (n) => n * 2;
+
+console.log(double(5));    // 输出：10
+console.log(double(14));   // 输出：28
+```
+
+当参数只有一个时，还可以省略括号：
+
+```javascript
+const double = n => n * 2;   // 参数只有一个，括号也可以省略
+```
+
+下面是几种函数写法的对照，它们的效果完全相同：
+
+```javascript
+// 写法一：function 声明
+function calculateDamage(base, multiplier) {
+    return base * multiplier;
+}
+
+// 写法二：函数表达式
+const calculateDamage = function(base, multiplier) {
+    return base * multiplier;
+};
+
+// 写法三：箭头函数
+const calculateDamage = (base, multiplier) => {
+    return base * multiplier;
+};
+
+// 写法四：箭头函数简化版
+const calculateDamage = (base, multiplier) => base * multiplier;
+```
+
+:::note
+你可能会问：这么多种写法，我该用哪个？
+
+对于初学者，建议先用 `function` 关键字写法，逻辑最清晰。但因为 Minecraft Script API 的文档和绝大多数社区代码都大量使用箭头函数，你**必须能够读懂**箭头函数的写法。
+
+在本教程后续涉及事件处理的地方，我们会使用箭头函数，因为那是 API 代码中最自然的写法。
+:::
+
+---
+
+## 1.3.6 作用域：变量的"生效范围"
+
+理解函数，就必须理解**作用域**。作用域决定了一个变量在哪些地方可以被访问到。
+
+### 全局作用域
+
+在所有函数外面定义的变量，拥有全局作用域，在代码的任何地方都可以访问：
+
+```javascript
+let serverName = "我的MC服务器";   // 全局变量
+
+function showServerInfo() {
+    console.log(`服务器名称：${serverName}`);   // 可以访问全局变量
+}
+
+showServerInfo();   // 输出：服务器名称：我的MC服务器
+```
+
+### 局部作用域（函数作用域）
+
+在函数内部定义的变量，只在这个函数内部有效，函数外面无法访问：
+
+```javascript
+function calculateDamage() {
+    let damage = 10;   // 局部变量，只在函数内有效
+    console.log(`函数内部：${damage}`);
+}
+
+calculateDamage();
+console.log(damage);   // 报错！damage 在函数外面不存在
+```
+
+这就好比你在一个房间里放了一件东西，你知道这是什么，而房间外没有任何人知道这是什么。
+
+下面这个例子可以帮你更直观地理解：
+
+```javascript
+let playerName = "Steve";   // 全局变量
+
+function testScope() {
+    let playerName = "Alex";   // 局部变量，和全局的 playerName 是两个不同的变量
+    console.log(`函数内部：${playerName}`);   // 输出：Alex（用的是局部变量）
+}
+
+testScope();
+console.log(`函数外部：${playerName}`);   // 输出：Steve（用的是全局变量）
+```
+
+:::warning
+虽然全局变量在任何地方都能访问，听起来很方便，但请**不要滥用全局变量**。
+
+如果你的代码里到处都是全局变量，当程序变得复杂，你会很难追踪某个变量是在哪里被修改的，这会让调试变成噩梦。
+
+一个好的原则是：**变量的作用范围越小越好**。能用局部变量解决的，就不要用全局变量。在 Script API 开发中，我们通常只把真正需要跨函数共享的数据放在全局范围。
+:::
+
+---
+
+## 1.3.7 事件处理：Script API 的核心机制
+
+现在我们来到这一节最重要的部分，也是 Minecraft Script API 的核心概念之一：**事件处理**。
+
+首先，什么是事件？
+
+在 Minecraft 中，每时每刻都在发生各种各样的"事情"：玩家跳跃、玩家受伤、方块被破坏、实体被生成……这些"事情"在编程中叫做**事件**。
+
+Script API 允许你"监听"这些事件：一旦某个事件发生，你预先准备好的函数就会自动被调用，执行你想要的操作。
+
+这个"预先准备好的函数"有一个专门的名字：**事件处理函数**（Event Handler），也叫**回调函数**（Callback Function）。
+
+用一个生活中的比喻来理解：
+
+你在煮饭的时候，可以做其他事情，但是你告诉自己"**一旦**计时器响了，就去关火"。这里，"计时器响了"是事件，"关火"这个动作就是回调函数，它不是立刻执行的，而是等到事件发生时才执行。
+
+### 回调函数的概念
+
+在学习 API 的事件处理之前，先用纯 JavaScript 来理解回调函数的概念：
+
+```javascript
+// 定义一个函数，它接受另一个函数作为参数
+function doSomethingLater(callback) {
+    console.log("准备执行操作...");
+    callback();   // 在适当的时机，调用传入的函数
+    console.log("操作完成。");
+}
+
+// 把一个函数作为参数传进去
+doSomethingLater(function() {
+    console.log("这是在适当时机被调用的代码！");
+});
+```
+
+输出结果：
+
+```
+准备执行操作...
+这是在适当时机被调用的代码！
+操作完成。
+```
+
+函数可以像变量一样被传来传去，这是 JavaScript 的一个重要特性。正是这个特性，让事件处理成为可能。
+
+### 在 Script API 中订阅事件
+
+在 Minecraft Script API 中，监听一个事件用 `.subscribe()` 方法，你需要给它传入一个回调函数：
+
+```javascript
+import { world } from "@minecraft/server";
+
+// 监听"玩家生成"事件
+// 当有玩家进入游戏时，传入的这个箭头函数会自动被调用
+world.afterEvents.playerSpawn.subscribe((event) => {
+    const player = event.player;
+    const playerName = player.name;
+
+    player.sendMessage(`欢迎回来，${playerName}！`);
+    world.sendMessage(`${playerName} 加入了游戏。`);
+});
+```
+
+让我们把这段代码拆解开来看：
+
+```javascript
+world.afterEvents.playerSpawn.subscribe(
+    // 这里传入了一个箭头函数作为回调
+    (event) => {
+        // event 是事件对象，里面包含了这次事件的所有相关信息
+        // 比如是哪个玩家触发了这个事件
+        const player = event.player;
+        player.sendMessage("欢迎！");
+    }
+);
+```
+
+- `world.afterEvents.playerSpawn` 是"玩家生成"这个事件的入口
+- `.subscribe(...)` 表示"我要订阅这个事件，请在它发生的时候通知我"
+- 传入的箭头函数就是"通知我之后要执行的操作"
+- `event` 参数是 API 自动传入的，包含了事件的详细信息
+
+### 一个更完整的事件处理示例
+
+```javascript
+import { world } from "@minecraft/server";
+
+// 定义一个函数，处理玩家受伤的逻辑
+function handlePlayerHurt(event) {
+    const player = event.hurtEntity;
+
+    // 如果受伤的不是玩家，直接结束
+    if (player.typeId !== "minecraft:player") {
+        return;
+    }
+
+    const health = player.getComponent("minecraft:health").currentValue;
+    const playerName = player.name;
+
+    // 根据血量情况发出不同的提示
+    if (health <= 4) {
+        player.sendMessage("危险！你的血量极低！");
+        world.sendMessage(`警告：${playerName} 处于危险状态！`);
+    } else if (health <= 10) {
+        player.sendMessage("你受伤了，注意补血。");
+    }
+}
+
+// 订阅事件，把处理函数传入
+world.afterEvents.entityHurt.subscribe(handlePlayerHurt);
+```
+
+注意这里的写法：我们先把处理逻辑单独写成了一个函数 `handlePlayerHurt`，然后把这个函数的名字传给 `.subscribe()`。这和直接在 `.subscribe()` 里写箭头函数效果完全相同，但当逻辑比较复杂时，这种写法会更清晰。
+
+---
+
+## 1.3.8 函数的实际组合运用
+
+在真实的开发中，我们会把复杂的逻辑拆分成多个小函数，然后在事件处理里组合调用它们：
+
+```javascript
+import { world } from "@minecraft/server";
+
+// 判断玩家血量等级，返回一个描述字符串
+function getHealthStatus(health) {
+    if (health <= 2) return "极度危险";
+    if (health <= 6) return "血量偏低";
+    if (health <= 14) return "状态一般";
+    return "状态良好";
+}
+
+// 根据血量状态构建提示信息
+function buildWarningMessage(playerName, health) {
+    const status = getHealthStatus(health);
+    return `${playerName} 的状态：${status}（${health} / 20）`;
+}
+
+// 判断是否需要向全服广播警告
+function shouldBroadcast(health) {
+    return health <= 4;
+}
+
+// 事件处理函数，组合调用上面的小函数
+function handlePlayerHurt(event) {
+    const player = event.hurtEntity;
+
+    if (player.typeId !== "minecraft:player") {
+        return;
+    }
+
+    const health = player.getComponent("minecraft:health").currentValue;
+    const playerName = player.name;
+    const message = buildWarningMessage(playerName, health);
+
+    player.sendMessage(message);
+
+    if (shouldBroadcast(health)) {
+        world.sendMessage(`[服务器警告] ${message}`);
+    }
+}
+
+world.afterEvents.entityHurt.subscribe(handlePlayerHurt);
+```
+
+这种把代码拆分成小函数、各司其职的写法，是专业开发者普遍遵循的原则。每个函数只做一件事，逻辑清晰，也很容易单独测试和修改。
+
+---
+
+## 1.3.9 实战练习：玩家加入服务器的欢迎系统
+
+综合运用这一节学到的所有知识，搭建一个完整的欢迎系统：
+
+```javascript
+import { world } from "@minecraft/server";
+
+// 记录服务器已接待的玩家总数（全局变量，需要跨事件共享）
+let totalJoinCount = 0;
+
+// 根据加入次数生成不同的欢迎语
+function getWelcomeMessage(playerName, joinCount) {
+    if (joinCount === 1) {
+        return `欢迎 ${playerName} 首次加入服务器！希望你玩得开心！`;
+    } else if (joinCount <= 5) {
+        return `欢迎回来，${playerName}！你是本次开服后第 ${joinCount} 位加入的玩家。`;
+    } else {
+        return `${playerName} 回来了！`;
+    }
+}
+
+// 向玩家发送私人提示
+function sendPrivateTips(player) {
+    player.sendMessage("--- 服务器提示 ---");
+    player.sendMessage("输入 /help 查看可用指令");
+    player.sendMessage("祝你游戏愉快！");
+}
+
+// 事件处理主函数
+function handlePlayerJoin(event) {
+    const player = event.player;
+    const playerName = player.name;
+
+    // 更新计数
+    totalJoinCount++;
+
+    // 生成欢迎消息并全服广播
+    const welcomeMsg = getWelcomeMessage(playerName, totalJoinCount);
+    world.sendMessage(welcomeMsg);
+
+    // 向该玩家单独发送私人提示
+    sendPrivateTips(player);
+
+    // 在控制台记录日志
+    console.log(`[日志] ${playerName} 加入了游戏，今日第 ${totalJoinCount} 位玩家。`);
+}
+
+// 订阅玩家生成事件
+world.afterEvents.playerSpawn.subscribe(handlePlayerJoin);
+```
+
+---
+
+## 本节知识总结
+
+| 概念 | 要点 | 示例 |
+|------|------|------|
+| 函数定义 | 用 `function` 关键字定义 | `function greet() {...}` |
+| 函数调用 | 函数名加括号 | `greet()` |
+| 参数 | 向函数传递信息 | `function greet(name) {...}` |
+| 默认参数 | 参数未传入时的备用值 | `function greet(name = "玩家") {...}` |
+| 返回值 | 用 `return` 把结果送出函数 | `return damage * 2;` |
+| 提前返回 | 用 `return` 终止函数执行 | `if (!player) return;` |
+| 函数表达式 | 把函数赋值给变量 | `const greet = function() {...}` |
+| 箭头函数 | 更简洁的函数写法 | `const greet = (name) => {...}` |
+| 全局作用域 | 函数外的变量，全局可访问 | `let count = 0;`（写在函数外） |
+| 局部作用域 | 函数内的变量，外部不可访问 | 函数内部的 `let` |
+| 回调函数 | 被作为参数传入的函数 | `.subscribe(handleEvent)` |
+| 事件订阅 | 监听 API 事件，事件发生时调用回调 | `world.afterEvents.xxx.subscribe(fn)` |
+
+---
+
+## 课后练习
+
+**练习1：** 写一个函数 `calculateDistance`，接受两个参数 `x1` 和 `x2`（代表一维坐标），返回它们之间的距离（两数之差的绝对值）。提示：JavaScript 中取绝对值可以使用 `Math.abs(数字)`。
+
+**练习2：** 写一个函数 `describeItem`，接受物品名称（`itemName`）、数量（`count`）和稀有度（`rarity`，可以是 `"普通"`、`"稀有"`、`"史诗"`）三个参数，返回一段描述字符串，例如 `"[稀有] 钻石剑 x1"`。为 `rarity` 设置默认值 `"普通"`。
+
+**练习3（思考题）：** 回顾 1.3.8 中把逻辑拆分成多个小函数的写法。思考一下，如果不拆分，把所有逻辑都写在 `handlePlayerHurt` 一个函数里，会有什么缺点？拆分成多个小函数又有哪些好处？
+
+---
+
+> **下一节预告：1.4 循环与批量操作**
+>
+> 现在你已经能定义函数、处理事件了。但还有一个非常常见的需求我们还没有解决：对一批数据执行相同的操作。比如，服务器里有20个玩家，你想给每个人都发一条消息；或者你想检查100个方块坐标中哪些位置是空的。手动写20遍、100遍显然不现实。下一节，我们将学习**循环**，让程序自动重复执行操作，这将大大拓展你能处理的问题规模。

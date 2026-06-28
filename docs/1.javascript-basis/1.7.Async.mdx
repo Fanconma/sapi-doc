@@ -1,0 +1,736 @@
+---
+sidebar_position: 7
+---
+# 1.7 异步与事件机制
+
+## 前言：当代码需要"等待"的时候
+
+在前几节中，我们写的所有代码都遵循同一个规律：从第一行开始，一行执行完再执行下一行，整整齐齐，按顺序来。这种执行方式叫做**同步（Synchronous）**。
+
+但现实世界的程序并不总是这么简单。
+
+想象一下你在 Minecraft 服务器里触发了一个机关：拉下拉杆，10秒后爆炸。如果程序是完全同步的，那么在这10秒的等待过程中，整个游戏就必须暂停——没有玩家能移动，没有生物能行动，什么都不能发生，只是干等着那10秒过去。
+
+这显然不是我们想要的。我们希望程序能够在等待的同时，继续处理其他事情。这就是**异步（Asynchronous）的**意义。
+
+异步是 JavaScript 中最重要、也是很多初学者觉得最难理解的概念之一。这一节我们不会把所有细节都讲透，而是通过直观的类比和具体的例子，帮你建立正确的基础认识，为后续真正使用 Script API 的异步功能打好铺垫。
+
+---
+
+## 1.7.1 同步与异步：用生活来理解
+
+先用一个具体的生活场景来感受这两者的区别。
+
+**同步的方式：**
+
+你去一家餐厅点餐。你站在柜台前，点了一碗面。然后你就站在那里一动不动地等，看着厨师做面，什么都不做。面做好了，你拿到面，找座位坐下，开始吃。
+
+在等待的整个过程中，你什么都没有做，时间全浪费了。
+
+**异步的方式：**
+
+你去同一家餐厅点餐。你点了一碗面，拿到一个号码牌，然后找了个座位坐下来刷手机。厨师在后台做面，你在前台做自己的事。面做好了，服务员叫你的号，你去取面，开始吃。
+
+等待的时间没有浪费，你做了别的事情。叫号这个动作，就像一个"事件"，触发了你"去取面"这个操作。
+
+**在程序里：**
+
+```
+同步：
+[任务A开始] → [任务A等待] → [任务A完成] → [任务B开始] → [任务B完成]
+（任务B必须等任务A完全结束才能开始）
+
+异步：
+[任务A开始] → [任务A等待中...]
+                    ↓ 同时
+              [任务B开始] → [任务B完成]
+                    ↓ 任务A等待结束
+              [任务A完成后的操作]
+```
+
+在 Minecraft Script API 中，异步的场景非常常见：
+- 等待5秒后给玩家发消息
+- 每隔一段时间检查一次玩家状态
+- 等待某个操作完成后再执行下一步
+
+---
+
+## 1.7.2 回顾：你已经用过异步了
+
+其实，异步的概念你并不陌生。回想一下上一节我们在事件处理中写过的代码：
+
+```javascript
+world.afterEvents.playerSpawn.subscribe((event) => {
+    const player = event.player;
+    player.sendMessage("欢迎！");
+});
+```
+
+这里，`subscribe` 里的函数**不是立刻执行的**。它被注册了，然后程序继续往下运行。等到玩家真正加入游戏这件事发生了，这个函数才被调用。
+
+这就是异步的一种形式：你提前安排好了"发生某件事时要做什么"，然后该干嘛干嘛，等事件真的发生，再执行对应的函数。
+
+这种模式——"先注册，等触发，再执行"——贯穿了整个 Script API 的开发。
+
+---
+
+## 1.7.3 定时操作：system.runTimeout 与 system.runInterval
+
+Minecraft Script API 提供了两个非常实用的工具，用来处理"延迟执行"和"定时重复执行"的需求。
+
+### system.runTimeout：延迟执行一次
+
+`system.runTimeout` 的含义是："在指定的游戏刻之后，执行一次这个函数。"
+
+```javascript
+import { world, system } from "@minecraft/server";
+
+world.afterEvents.playerSpawn.subscribe(({ player }) => {
+    // 玩家加入后，立刻发送第一条消息
+    player.sendMessage("欢迎加入服务器！");
+
+    // 100 个游戏刻（约5秒）后，发送第二条消息
+    system.runTimeout(() => {
+        player.sendMessage("提示：输入 /help 查看可用指令。");
+    }, 100);
+
+    // 这行代码在 runTimeout 注册完之后立刻执行，不会等待5秒
+    console.log(`${player.name} 的欢迎流程已启动。`);
+});
+```
+
+注意代码的执行顺序：
+
+1. 玩家加入，立刻发送"欢迎加入服务器！"
+2. 向 `system` 注册一个延迟任务，告诉它"100刻后执行这个函数"
+3. 立刻输出日志（不等待）
+4. ……游戏继续正常运行……
+5. 100刻后，之前注册的函数被调用，发送提示消息
+
+:::note
+Minecraft 的游戏刻（tick）是游戏时间的基本单位，正常情况下每秒有 20 个游戏刻。所以：
+- 20 刻 ≈ 1 秒
+- 100 刻 ≈ 5 秒
+- 200 刻 ≈ 10 秒
+- 1200 刻 ≈ 60 秒
+
+在 Script API 的时间相关操作中，你传入的时间单位都是游戏刻，不是秒或毫秒。
+:::
+
+### system.runInterval：定时重复执行
+
+`system.runInterval` 的含义是："每隔指定的游戏刻，就执行一次这个函数，并且一直重复下去。"
+
+```javascript
+import { world, system } from "@minecraft/server";
+
+// 每隔 200 刻（约10秒），向全服广播一条提示
+system.runInterval(() => {
+    world.sendMessage("[服务器] 请遵守服务器规则，共同维护良好游戏环境。");
+}, 200);
+```
+
+这个函数会一直运行，只要服务器不关闭，每10秒就广播一次。
+
+**取消定时任务：**
+
+`system.runInterval` 和 `system.runTimeout` 都会返回一个 ID，你可以用这个 ID 来取消对应的任务：
+
+```javascript
+import { world, system } from "@minecraft/server";
+
+// 启动一个倒计时公告
+let countdownValue = 10;
+
+const intervalId = system.runInterval(() => {
+    if (countdownValue > 0) {
+        world.sendMessage(`活动将在 ${countdownValue} 秒后开始！`);
+        countdownValue--;
+    } else {
+        world.sendMessage("活动现在开始！");
+        // 取消这个定时任务，不再继续执行
+        system.clearRun(intervalId);
+    }
+}, 20);  // 每20刻（1秒）执行一次
+```
+
+这段代码模拟了一个倒计时广播：每隔1秒输出一次倒计时，从10数到0，然后宣布活动开始并停止定时任务。
+
+---
+
+## 1.7.4 异步可能引发的问题：执行顺序不是你想的那样
+
+理解异步最重要的一点，是认识到**代码的书写顺序和实际执行顺序可能是不同的**。
+
+来看这个例子：
+
+```javascript
+import { world, system } from "@minecraft/server";
+
+console.log("第一步：程序开始");
+
+system.runTimeout(() => {
+    console.log("第三步：延迟任务执行");
+}, 40);
+
+console.log("第二步：注册完延迟任务，继续往下走");
+```
+
+你可能以为输出顺序是"第一步、第三步、第二步"，但实际输出是：
+
+```
+第一步：程序开始
+第二步：注册完延迟任务，继续往下走
+（等待约2秒...）
+第三步：延迟任务执行
+```
+
+`system.runTimeout` 只是"预约"了一个任务，注册完之后程序立刻继续执行后面的代码，根本不会停下来等。
+
+这个特性初学时很容易搞错，来看一个错误示范：
+
+```javascript
+import { world, system } from "@minecraft/server";
+
+world.afterEvents.playerSpawn.subscribe(({ player }) => {
+    let welcomeDone = false;
+
+    system.runTimeout(() => {
+        welcomeDone = true;
+    }, 60);
+
+    // 错误：这里 welcomeDone 永远是 false！
+    // 因为上面的延迟任务还没执行，程序就已经跑到这里了
+    if (welcomeDone) {
+        player.sendMessage("欢迎流程完成。");
+    }
+});
+```
+
+正确的做法是，把需要在延迟之后执行的代码，放进延迟任务的回调函数里：
+
+```javascript
+world.afterEvents.playerSpawn.subscribe(({ player }) => {
+    system.runTimeout(() => {
+        // 需要在延迟之后做的事，放在这里
+        player.sendMessage("欢迎流程完成。");
+    }, 60);
+});
+```
+
+---
+
+## 1.7.5 Promise：处理异步操作的现代方式
+
+随着 JavaScript 的发展，出现了一种更优雅的处理异步的方式：**Promise（承诺）**。
+
+Promise 代表一个"将来某个时间点会有结果"的操作。你可以把它理解成一张**取票单**：你拿着取票单，知道将来凭这张单子能取到结果，但现在还没到。
+
+一个 Promise 有三种状态：
+- **pending（等待中）**：操作还没完成
+- **fulfilled（已完成）**：操作成功，有结果了
+- **rejected（已拒绝）**：操作失败，有错误信息
+
+用一个模拟的例子来理解：
+
+```javascript
+// 创建一个 Promise，模拟"检查玩家是否有权限"这个异步操作
+function checkPermission(playerName) {
+    return new Promise((resolve, reject) => {
+        // 模拟需要一点时间的检查过程
+        system.runTimeout(() => {
+            const adminList = ["Notch", "Jeb", "Herobrine"];
+
+            if (adminList.includes(playerName)) {
+                resolve(`${playerName} 拥有管理员权限`);  // 成功，传出结果
+            } else {
+                reject(`${playerName} 没有管理员权限`);    // 失败，传出错误信息
+            }
+        }, 20);
+    });
+}
+```
+
+拿到 Promise 之后，用 `.then()` 处理成功的情况，用 `.catch()` 处理失败的情况：
+
+```javascript
+checkPermission("Notch")
+    .then((message) => {
+        console.log(`检查结果：${message}`);
+        console.log("允许执行管理员操作。");
+    })
+    .catch((errorMessage) => {
+        console.log(`检查结果：${errorMessage}`);
+        console.log("拒绝执行，权限不足。");
+    });
+
+console.log("权限检查已发起，等待结果...");
+```
+
+输出结果（注意顺序）：
+
+```
+权限检查已发起，等待结果...
+（等待约1秒...）
+检查结果：Notch 拥有管理员权限
+允许执行管理员操作。
+```
+
+最后一行"权限检查已发起"先输出，再次印证了异步不会阻塞后续代码的执行。
+
+---
+
+## 1.7.6 async/await：让异步代码看起来像同步
+
+Promise 的 `.then().catch()` 写法在逻辑简单时还好，但如果你需要连续做好几个异步操作，代码会变成这样：
+
+```javascript
+checkPermission(playerName)
+    .then((result) => {
+        return loadPlayerData(playerName);
+    })
+    .then((data) => {
+        return saveReward(data);
+    })
+    .then((reward) => {
+        console.log(`奖励发放完成：${reward}`);
+    })
+    .catch((error) => {
+        console.log(`操作失败：${error}`);
+    });
+```
+
+这种层层嵌套的写法不好阅读，也不好维护。为了解决这个问题，JavaScript 提供了 `async/await` 语法。
+
+**`async` 和 `await` 是一对组合拳：**
+
+- 在函数前面加上 `async`，这个函数就变成了一个"异步函数"
+- 在异步函数内部，可以用 `await` 来等待一个 Promise 完成，就好像它是同步的一样
+
+```javascript
+// 把上面那段 Promise 链改写成 async/await
+async function handlePlayerReward(playerName) {
+    const permissionResult = await checkPermission(playerName);
+    const playerData = await loadPlayerData(playerName);
+    const reward = await saveReward(playerData);
+    console.log(`奖励发放完成：${reward}`);
+}
+```
+
+是不是清晰多了？每一行的意图一目了然，读起来就像在写普通的同步代码。
+
+**处理错误：**
+
+`async/await` 用 `try...catch` 语句来处理错误，取代了 `.catch()`：
+
+```javascript
+async function handlePlayerReward(playerName) {
+    try {
+        const permissionResult = await checkPermission(playerName);
+        console.log(permissionResult);
+
+        const playerData = await loadPlayerData(playerName);
+        const reward = await saveReward(playerData);
+
+        console.log(`奖励发放完成：${reward}`);
+    } catch (error) {
+        // 上面任何一个 await 失败，都会跳到这里
+        console.log(`操作失败：${error}`);
+    }
+}
+```
+
+`try` 块里放你正常的操作逻辑，一旦任何一步出错，程序就会跳进 `catch` 块，`error` 参数里存放着错误信息。
+
+:::note
+`await` 只能在 `async` 函数内部使用。如果你在普通函数里用 `await`，程序会报错。这是初学者很容易踩的坑。
+
+记住这个规则：**只要函数里用了 `await`，函数本身就必须声明为 `async`。**
+:::
+
+---
+
+## 1.7.7 在 Script API 中，异步是什么样的？
+
+Minecraft Script API 本身大量使用了异步设计，其中有些地方的异步操作和标准的 JavaScript 有一些区别，这里做一个重要说明。
+
+### 事件系统本身就是异步的
+
+整个事件订阅机制（`.subscribe()`）就是异步的核心：你注册回调，等事件发生，回调被调用。这个模式我们已经非常熟悉了。
+
+```javascript
+import { world } from "@minecraft/server";
+
+// 这个回调函数不知道什么时候会被调用
+// 可能是5分钟后，可能是5小时后，取决于玩家什么时候加入
+world.afterEvents.playerSpawn.subscribe(({ player }) => {
+    player.sendMessage("你加入了！");
+});
+
+// 注册完之后，程序继续运行，不会在这里等待
+console.log("事件监听已注册。");
+```
+
+### system.runTimeout 和 system.runInterval 是 API 的异步工具
+
+这两个方法是 Script API 中处理"延迟"和"定时"任务的标准方式，我们在 1.7.3 中已经详细介绍了。
+
+### 一个综合性的异步流程示例
+
+把事件、延迟、定时任务组合在一起，模拟一个完整的游戏场景：
+
+```javascript
+import { world, system } from "@minecraft/server";
+
+// 追踪每个玩家的欢迎状态
+const welcomedPlayers = new Set();
+
+world.afterEvents.playerSpawn.subscribe(({ player }) => {
+    const playerName = player.name;
+
+    // 避免重复欢迎同一个玩家（比如玩家死亡重生时）
+    if (welcomedPlayers.has(playerName)) {
+        player.sendMessage("欢迎回来！");
+        return;
+    }
+
+    // 首次加入的玩家，执行完整欢迎流程
+    welcomedPlayers.add(playerName);
+
+    // 立刻发送第一条消息
+    player.sendMessage("欢迎首次加入本服务器！");
+    world.sendMessage(`新玩家 ${playerName} 加入了游戏！`);
+
+    // 3秒后发送规则提示
+    system.runTimeout(() => {
+        player.sendMessage("请阅读服务器规则：不允许破坏他人建筑。");
+    }, 60);
+
+    // 10秒后发送一次性礼包提示
+    system.runTimeout(() => {
+        player.sendMessage("新手礼包已发放到你的背包，请查收！");
+        // 这里可以调用给玩家物品的 API
+    }, 200);
+
+    console.log(`[日志] 完成了 ${playerName} 的新手欢迎流程注册。`);
+});
+
+// 每5分钟向全服广播一次在线人数
+system.runInterval(() => {
+    const playerCount = world.getPlayers().length;
+    if (playerCount > 0) {
+        world.sendMessage(`[服务器] 当前在线人数：${playerCount}`);
+    }
+}, 6000);  // 6000刻 = 5分钟
+```
+
+---
+
+## 1.7.8 一个特殊的数据结构：Set
+
+在上面的例子里，你注意到了 `new Set()` 这个东西。趁这个机会，我们来简单介绍一下 `Set`。
+
+`Set` 是 JavaScript 提供的一种集合数据结构，和数组很像，但有一个关键区别：**Set 里的每个值都是唯一的，不允许重复**。
+
+```javascript
+const bannedPlayers = new Set();
+
+// add：添加元素
+bannedPlayers.add("Griefer99");
+bannedPlayers.add("Troll123");
+bannedPlayers.add("Griefer99");  // 重复添加，不会有任何效果
+
+console.log(bannedPlayers.size);  // 输出：2（不是3，重复的被忽略了）
+
+// has：检查元素是否存在（比数组的 includes 更高效）
+console.log(bannedPlayers.has("Griefer99"));  // 输出：true
+console.log(bannedPlayers.has("Steve"));      // 输出：false
+
+// delete：删除元素
+bannedPlayers.delete("Troll123");
+console.log(bannedPlayers.size);  // 输出：1
+
+// 用 for...of 遍历
+for (let name of bannedPlayers) {
+    console.log(`封禁玩家：${name}`);
+}
+```
+
+`Set` 的典型使用场景正是像"已欢迎过的玩家"、"封禁名单"、"已领取奖励的玩家"这类需要记录"某个值是否出现过"的情况。
+
+:::tip
+`Set` 和数组的主要区别：
+
+| 特性 | 数组 | Set |
+|------|------|-----|
+| 元素是否可以重复 | 可以 | 不可以 |
+| 是否有顺序/下标 | 有 | 无 |
+| 检查元素是否存在 | `.includes()`（较慢） | `.has()`（较快） |
+| 适合的场景 | 有序的数据列表 | 去重、快速查找 |
+
+在处理大量数据时，`Set` 的 `.has()` 方法比数组的 `.includes()` 快得多。如果你的需求是"检查某个值是否在集合里"，并且不需要有序排列，优先考虑使用 `Set`。
+:::
+
+---
+
+## 1.7.9 另一个特殊结构：Map
+
+既然提到了 `Set`，顺带也介绍一下 `Map`。`Map` 是一种键值对的集合，和普通对象很像，但有一些重要的不同。
+
+```javascript
+// 用 Map 存储每个玩家的登录次数
+const loginCounts = new Map();
+
+// set：设置键值对
+loginCounts.set("Steve", 1);
+loginCounts.set("Alex", 5);
+loginCounts.set("Notch", 23);
+
+// get：根据键获取值
+console.log(loginCounts.get("Alex"));   // 输出：5
+console.log(loginCounts.get("Ghost"));  // 输出：undefined（不存在的键）
+
+// has：检查键是否存在
+console.log(loginCounts.has("Steve"));  // 输出：true
+console.log(loginCounts.has("Jeb"));    // 输出：false
+
+// 更新某个键的值
+loginCounts.set("Steve", loginCounts.get("Steve") + 1);
+console.log(loginCounts.get("Steve"));  // 输出：2
+
+// delete：删除一个键值对
+loginCounts.delete("Alex");
+
+// size：获取键值对的数量
+console.log(loginCounts.size);  // 输出：2
+
+// 遍历 Map
+loginCounts.forEach((count, name) => {
+    console.log(`${name} 已登录 ${count} 次`);
+});
+```
+
+**`Map` 和普通对象 `{}` 的区别：**
+
+| 特性 | 普通对象 `{}` | `Map` |
+|------|--------------|-------|
+| 键的类型 | 只能是字符串或 Symbol | 任何类型都可以作为键 |
+| 获取大小 | 需要 `Object.keys(obj).length` | 直接用 `.size` |
+| 遍历 | `for...in` 或 `Object.keys()` | `forEach` 或 `for...of` |
+| 适合的场景 | 描述一个事物的属性 | 存储键值对应关系的数据 |
+
+在 Script API 开发中，`Map` 非常适合用来记录"每个玩家对应的某个数据"，比如登录次数、积分、上次操作时间等等：
+
+```javascript
+import { world, system } from "@minecraft/server";
+
+// 用 Map 记录每个玩家的游戏时长（单位：刻）
+const playerPlayTime = new Map();
+
+// 玩家加入时，开始计时
+world.afterEvents.playerSpawn.subscribe(({ player }) => {
+    playerPlayTime.set(player.name, 0);
+});
+
+// 每 20 刻（1秒）更新一次所有在线玩家的游戏时长
+system.runInterval(() => {
+    for (let player of world.getPlayers()) {
+        const currentTime = playerPlayTime.get(player.name) ?? 0;
+        playerPlayTime.set(player.name, currentTime + 20);
+    }
+}, 20);
+
+// 玩家输入指令查询自己的游戏时长（简化示意）
+world.afterEvents.chatSend.subscribe(({ sender, message }) => {
+    if (message === "!时长") {
+        const ticks = playerPlayTime.get(sender.name) ?? 0;
+        const seconds = Math.floor(ticks / 20);
+        const minutes = Math.floor(seconds / 60);
+        sender.sendMessage(`你本次已游玩 ${minutes} 分 ${seconds % 60} 秒。`);
+    }
+});
+```
+
+:::note
+`??` 是**空值合并运算符（Nullish Coalescing Operator）**，它的意思是：如果左边的值是 `null` 或 `undefined`，就用右边的值作为替代。
+
+```javascript
+const value = playerPlayTime.get("NewPlayer") ?? 0;
+// 如果 "NewPlayer" 不在 Map 里，get 返回 undefined
+// undefined ?? 0 的结果是 0
+```
+
+它和 `||` 的区别在于：`||` 在左边是任何"假值"（包括 `0`、`""`）时都会用右边的值，而 `??` 只在左边是 `null` 或 `undefined` 时才用右边的值。在处理数字数据时，`??` 更安全，因为 `0` 是一个合法的数字，不应该被当作"不存在"处理。
+:::
+
+---
+
+## 1.7.10 实战练习：综合异步场景
+
+把这一节学到的概念综合运用，实现一个带有倒计时和状态追踪的游戏活动系统：
+
+```javascript
+import { world, system } from "@minecraft/server";
+
+// === 活动状态管理 ===
+const ActivityState = {
+    IDLE: "idle",           // 等待开始
+    COUNTDOWN: "countdown", // 倒计时中
+    ACTIVE: "active",       // 活动进行中
+    ENDED: "ended"          // 活动已结束
+};
+
+let currentState = ActivityState.IDLE;
+let activeIntervalId = null;
+
+// 记录参与活动的玩家得分
+const participantScores = new Map();
+
+// === 工具函数 ===
+
+function broadcastMessage(message) {
+    world.sendMessage(`[活动] ${message}`);
+    console.log(`[活动日志] ${message}`);
+}
+
+function getOnlinePlayerNames() {
+    return world.getPlayers().map(p => p.name);
+}
+
+// === 活动流程函数 ===
+
+function startCountdown(seconds) {
+    if (currentState !== ActivityState.IDLE) {
+        broadcastMessage("活动已在进行中，无法重复开始。");
+        return;
+    }
+
+    currentState = ActivityState.COUNTDOWN;
+    let remaining = seconds;
+
+    broadcastMessage(`活动将在 ${seconds} 秒后开始，请做好准备！`);
+
+    // 初始化当前所有在线玩家的得分
+    for (let name of getOnlinePlayerNames()) {
+        participantScores.set(name, 0);
+    }
+
+    // 每秒广播倒计时
+    const countdownId = system.runInterval(() => {
+        remaining--;
+
+        if (remaining > 0 && remaining <= 5) {
+            broadcastMessage(`${remaining}...`);
+        }
+
+        if (remaining <= 0) {
+            system.clearRun(countdownId);
+            startActivity();
+        }
+    }, 20);
+}
+
+function startActivity() {
+    currentState = ActivityState.ACTIVE;
+    broadcastMessage("活动开始！在60秒内尽可能获得积分！");
+
+    // 每5秒更新一次积分（模拟）
+    activeIntervalId = system.runInterval(() => {
+        for (let player of world.getPlayers()) {
+            const name = player.name;
+            if (participantScores.has(name)) {
+                const gained = Math.floor(Math.random() * 10) + 1;
+                participantScores.set(name, (participantScores.get(name) ?? 0) + gained);
+            }
+        }
+    }, 100);
+
+    // 60秒后结束活动
+    system.runTimeout(() => {
+        endActivity();
+    }, 1200);
+}
+
+function endActivity() {
+    if (activeIntervalId !== null) {
+        system.clearRun(activeIntervalId);
+        activeIntervalId = null;
+    }
+
+    currentState = ActivityState.ENDED;
+    broadcastMessage("活动结束！公布最终排名：");
+
+    // 按得分排序并公布结果
+    const results = [...participantScores.entries()]
+        .sort((a, b) => b[1] - a[1]);
+
+    results.forEach(([name, score], index) => {
+        broadcastMessage(`第 ${index + 1} 名：${name} - ${score} 分`);
+    });
+
+    // 5秒后重置状态，允许再次开始活动
+    system.runTimeout(() => {
+        currentState = ActivityState.IDLE;
+        participantScores.clear();
+        broadcastMessage("系统已重置，可以开始新一轮活动。");
+    }, 100);
+}
+
+// === 触发活动的入口（监听聊天指令）===
+world.afterEvents.chatSend.subscribe(({ sender, message }) => {
+    if (message === "!开始活动" && sender.playerPermissionLevel===2) {
+        startCountdown(10);
+    }
+
+    if (message === "!状态") {
+        sender.sendMessage(`当前活动状态：${currentState}`);
+        if (currentState === ActivityState.ACTIVE) {
+            const myScore = participantScores.get(sender.name) ?? 0;
+            sender.sendMessage(`你的当前积分：${myScore}`);
+        }
+    }
+});
+```
+
+这段代码综合用到了：
+- `system.runInterval` 和 `system.runTimeout` 处理异步时序
+- `system.clearRun` 取消定时任务
+- `Map` 存储玩家积分
+- 方法链（`filter`、`map`、`sort`）处理排名数据
+- 状态管理（用对象常量表示状态）
+- 事件订阅处理玩家输入
+
+---
+
+## 本节知识总结
+
+| 概念 | 要点 | 示例 |
+|------|------|------|
+| 同步 | 按顺序逐行执行，一行结束再执行下一行 | 普通的代码执行 |
+| 异步 | 不等待操作完成，继续执行后续代码 | 事件订阅、定时任务 |
+| 回调函数 | 异步操作完成后被调用的函数 | `.subscribe(callback)` |
+| `system.runTimeout` | 延迟指定游戏刻后执行一次 | `system.runTimeout(fn, 100)` |
+| `system.runInterval` | 每隔指定游戏刻重复执行 | `system.runInterval(fn, 20)` |
+| `system.clearRun` | 取消定时任务 | `system.clearRun(id)` |
+| Promise | 代表一个未来会有结果的异步操作 | `new Promise((resolve, reject) => {...})` |
+| `async/await` | 让异步代码像同步代码一样书写 | `async function f() { await promise; }` |
+| `try...catch` | 捕获异步操作中的错误 | `try { await f(); } catch(e) {...}` |
+| `Set` | 不允许重复元素的集合 | `new Set()`，用 `.has()` 检查 |
+| `Map` | 键值对集合，键可以是任何类型 | `new Map()`，用 `.get()` 和 `.set()` |
+| `??` | 空值合并，仅在值为 null/undefined 时用备用值 | `value ?? 0` |
+
+---
+
+## 课后练习
+
+**练习1：** 用 `system.runInterval` 实现一个简单的服务器时钟：每隔 1200 刻（约1分钟），向全服广播"服务器已运行 X 分钟"。使用一个变量来追踪已运行的分钟数，每次触发时递增。
+
+**练习2：** 创建一个 `Set` 来追踪"今日已领取每日奖励"的玩家名单。监听玩家聊天事件，当玩家发送"!领取"时，检查他是否已经领取过：如果没有，添加到 Set 并发送奖励提示；如果已经领取过，提示"今日已领取，明日再来"。
+
+**练习3（思考题）：** 回顾 1.7.4 中关于"执行顺序"的示例。思考一下：如果你在 `system.runTimeout` 的回调函数里访问一个玩家对象，而这个玩家在等待期间离开了游戏，会发生什么？在实际的 Script API 开发中，你应该如何防范这种情况？
+
+---
+
+> **下一节预告：1.8 小结与过渡**
+>
+> 恭喜你！你已经走完了整个 JavaScript 基础部分的学习之旅。在最后一节，我们将把前七节学过的所有概念串联起来，回顾整体知识脉络，并展望接下来真正进入 Minecraft Script API 核心开发时，这些基础知识将以什么样的方式发挥作用。

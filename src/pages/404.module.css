@@ -1,0 +1,203 @@
+/* 整体容器 */
+.container {
+  min-height: calc(100vh - var(--ifm-navbar-height) - 60px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.container.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 背景装饰 */
+.bg1 {
+  position: absolute;
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 700px;
+  height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(8, 126, 164, 0.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.bg2 {
+  position: absolute;
+  bottom: -150px;
+  right: -100px;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* 主体内容 */
+.content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  max-width: 520px;
+  width: 100%;
+}
+
+/* Creeper 图标 */
+.creeper {
+  margin: 0 auto 1.5rem;
+  width: 80px;
+  height: 80px;
+  animation: float 3.5s ease-in-out infinite;
+}
+
+.creeperSvg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 8px 16px rgba(93, 138, 60, 0.3));
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-10px); }
+}
+
+/* 404 数字 */
+.code404 {
+  font-size: clamp(5rem, 18vw, 9rem);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  background: linear-gradient(135deg, #087ea4 0%, #149eca 50%, #0da5d6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.25rem;
+  user-select: none;
+}
+
+/* 标题 */
+.title {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.875rem;
+}
+
+[data-theme="dark"] .title { color: #f3f4f6; }
+
+/* 描述 */
+.desc {
+  font-size: 1.0625rem;
+  color: #6b7280;
+  line-height: 1.65;
+  margin-bottom: 1.5rem;
+}
+
+[data-theme="dark"] .desc { color: #9ca3af; }
+
+/* 提示框 */
+.tip {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  background: rgba(8, 126, 164, 0.06);
+  border: 1px solid rgba(8, 126, 164, 0.15);
+  border-left: 3px solid #087ea4;
+  border-radius: 0 0.5rem 0.5rem 0;
+  padding: 0.75rem 1rem;
+  margin-bottom: 2rem;
+  font-size: 0.875rem;
+  color: #374151;
+  text-align: left;
+  max-width: 100%;
+}
+
+[data-theme="dark"] .tip {
+  background: rgba(20, 158, 202, 0.08);
+  border-color: rgba(20, 158, 202, 0.15);
+  border-left-color: #149eca;
+  color: #d1d5db;
+}
+
+.tipIcon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+/* 按钮组 */
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.875rem;
+  flex-wrap: wrap;
+}
+
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.5rem;
+  border-radius: 2rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #087ea4, #149eca);
+  box-shadow: 0 4px 14px rgba(8, 126, 164, 0.35);
+  text-decoration: none !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btnPrimary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(8, 126, 164, 0.45);
+}
+
+.btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.5rem;
+  border-radius: 2rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #087ea4 !important;
+  background: transparent;
+  border: 1.5px solid rgba(8, 126, 164, 0.3);
+  text-decoration: none !important;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.btnSecondary:hover {
+  transform: translateY(-2px);
+  border-color: #087ea4;
+  background: rgba(8, 126, 164, 0.06);
+}
+
+[data-theme="dark"] .btnSecondary {
+  color: #149eca !important;
+  border-color: rgba(20, 158, 202, 0.3);
+}
+
+[data-theme="dark"] .btnSecondary:hover {
+  border-color: #149eca;
+  background: rgba(20, 158, 202, 0.08);
+}
+
+/* 响应式 */
+@media (max-width: 480px) {
+  .actions { flex-direction: column; width: 100%; }
+  .btnPrimary, .btnSecondary { width: 100%; justify-content: center; }
+  .creeper { width: 64px; height: 64px; }
+}
